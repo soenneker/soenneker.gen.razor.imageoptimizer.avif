@@ -11,6 +11,7 @@
         <IncludeBuildOutput>false</IncludeBuildOutput>
         <DevelopmentDependency>true</DevelopmentDependency>
         <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+        <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);AddBuildTasksOutputToPackage</TargetsForTfmSpecificContentInPackage>
     </PropertyGroup>
 
     <PropertyGroup>
@@ -47,11 +48,8 @@
     </ItemGroup>
 
     <ItemGroup>
-        <None Include="Soenneker.Gen.Razor.ImageOptimizer.Avif.targets" Pack="true" PackagePath="build\" />
-        <None Include="Soenneker.Gen.Razor.ImageOptimizer.Avif.targets" Pack="true" PackagePath="buildTransitive\" />
-
-        <None Include="..\Soenneker.Gen.Razor.ImageOptimizer.Avif.BuildTasks\bin\$(Configuration)\**\*.*" Pack="true"
-              PackagePath="buildTransitive\%(RecursiveDir)%(Filename)%(Extension)" />
+        <None Include="Soenneker.Gen.Razor.ImageOptimizer.Avif.targets" Pack="true" PackagePath="build/" />
+        <None Include="Soenneker.Gen.Razor.ImageOptimizer.Avif.targets" Pack="true" PackagePath="buildTransitive/" />
     </ItemGroup>
 
     <ItemGroup>
@@ -65,8 +63,15 @@
 
     <Target Name="BuildBuildTasksTool" BeforeTargets="Pack" Condition="'$(IsPackable)' == 'true'">
 
-        <MSBuild Projects="..\Soenneker.Gen.Razor.ImageOptimizer.Avif.BuildTasks\Soenneker.Gen.Razor.ImageOptimizer.Avif.BuildTasks.csproj" Targets="Build" Properties="Configuration=$(Configuration);NoBuild=false" BuildInParallel="true" />
+        <MSBuild Projects="..\Soenneker.Gen.Razor.ImageOptimizer.Avif.BuildTasks\Soenneker.Gen.Razor.ImageOptimizer.Avif.BuildTasks.csproj" Targets="Build" Properties="Configuration=$(Configuration);NoBuild=false" RemoveProperties="TargetFramework;TargetFrameworks" BuildInParallel="true" />
 
         <Error Condition="!Exists('..\Soenneker.Gen.Razor.ImageOptimizer.Avif.BuildTasks\bin\$(Configuration)\Soenneker.Gen.Razor.ImageOptimizer.Avif.BuildTasks.dll')" Text="BuildTasks output missing. Aborting pack to avoid publishing a broken package." />
+    </Target>
+
+    <Target Name="AddBuildTasksOutputToPackage" DependsOnTargets="BuildBuildTasksTool">
+        <ItemGroup>
+            <TfmSpecificPackageFile Include="..\Soenneker.Gen.Razor.ImageOptimizer.Avif.BuildTasks\bin\$(Configuration)\**\*.*"
+                                    PackagePath="buildTransitive/%(RecursiveDir)" />
+        </ItemGroup>
     </Target>
 </Project>
