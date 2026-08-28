@@ -1,0 +1,42 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+    <PropertyGroup>
+        <_ImageOptimizerAvifBuildTasksDllFromPackage>$([System.IO.Path]::Combine('$(MSBuildThisFileDirectory)', 'Soenneker.Gen.Razor.ImageOptimizer.Avif.BuildTasks.dll'))</_ImageOptimizerAvifBuildTasksDllFromPackage>
+        <_ImageOptimizerAvifBuildTasksDllFromBuildTransitive>$([System.IO.Path]::GetFullPath($([System.IO.Path]::Combine('$(MSBuildThisFileDirectory)', '..', 'buildTransitive', 'Soenneker.Gen.Razor.ImageOptimizer.Avif.BuildTasks.dll'))))</_ImageOptimizerAvifBuildTasksDllFromBuildTransitive>
+        <_ImageOptimizerAvifBuildTasksDllFromProject>$([System.IO.Path]::GetFullPath($([System.IO.Path]::Combine('$(MSBuildThisFileDirectory)', '..', 'Soenneker.Gen.Razor.ImageOptimizer.Avif.BuildTasks', 'bin', '$(Configuration)', 'Soenneker.Gen.Razor.ImageOptimizer.Avif.BuildTasks.dll'))))</_ImageOptimizerAvifBuildTasksDllFromProject>
+        <ImageOptimizerAvifBuildTasksDllPath Condition="'$(ImageOptimizerAvifBuildTasksDllPath)'=='' and Exists('$(_ImageOptimizerAvifBuildTasksDllFromPackage)')">$(_ImageOptimizerAvifBuildTasksDllFromPackage)</ImageOptimizerAvifBuildTasksDllPath>
+        <ImageOptimizerAvifBuildTasksDllPath Condition="'$(ImageOptimizerAvifBuildTasksDllPath)'=='' and Exists('$(_ImageOptimizerAvifBuildTasksDllFromBuildTransitive)')">$(_ImageOptimizerAvifBuildTasksDllFromBuildTransitive)</ImageOptimizerAvifBuildTasksDllPath>
+        <ImageOptimizerAvifBuildTasksDllPath Condition="'$(ImageOptimizerAvifBuildTasksDllPath)'=='' and Exists('$(_ImageOptimizerAvifBuildTasksDllFromProject)')">$(_ImageOptimizerAvifBuildTasksDllFromProject)</ImageOptimizerAvifBuildTasksDllPath>
+
+        <ImageOptimizerAvifEnabled Condition="'$(ImageOptimizerAvifEnabled)'==''">true</ImageOptimizerAvifEnabled>
+        <ImageOptimizerAvifWwwRootPath Condition="'$(ImageOptimizerAvifWwwRootPath)'==''">$(ProjectDir)wwwroot</ImageOptimizerAvifWwwRootPath>
+        <ImageOptimizerAvifSourceExtensions Condition="'$(ImageOptimizerAvifSourceExtensions)'==''">png;jpg;jpeg</ImageOptimizerAvifSourceExtensions>
+        <ImageOptimizerAvifQuality Condition="'$(ImageOptimizerAvifQuality)'==''">80</ImageOptimizerAvifQuality>
+        <ImageOptimizerAvifSpeed Condition="'$(ImageOptimizerAvifSpeed)'==''">6</ImageOptimizerAvifSpeed>
+        <ImageOptimizerAvifLossless Condition="'$(ImageOptimizerAvifLossless)'==''">false</ImageOptimizerAvifLossless>
+        <ImageOptimizerAvifProgressive Condition="'$(ImageOptimizerAvifProgressive)'==''">true</ImageOptimizerAvifProgressive>
+        <ImageOptimizerAvifStripMetadata Condition="'$(ImageOptimizerAvifStripMetadata)'==''">true</ImageOptimizerAvifStripMetadata>
+        <ImageOptimizerAvifForce Condition="'$(ImageOptimizerAvifForce)'==''">false</ImageOptimizerAvifForce>
+        <ImageOptimizerAvifFailOnError Condition="'$(ImageOptimizerAvifFailOnError)'==''">true</ImageOptimizerAvifFailOnError>
+
+        <_ImageOptimizerAvifProjectDir>$([System.IO.Path]::GetDirectoryName('$(ProjectDir)x'))</_ImageOptimizerAvifProjectDir>
+        <_ImageOptimizerAvifProjectDir Condition="'$(_ImageOptimizerAvifProjectDir)'==''">$(MSBuildProjectDirectory)</_ImageOptimizerAvifProjectDir>
+        <_ImageOptimizerAvifOutputPathArg Condition="'$(ImageOptimizerAvifOutputPath)'!=''"> --outputPath &quot;$(ImageOptimizerAvifOutputPath)&quot;</_ImageOptimizerAvifOutputPathArg>
+    </PropertyGroup>
+
+    <Target Name="RunRazorImageOptimizerAvifBuildTasks"
+            BeforeTargets="BeforeBuild"
+            Condition="'$(DesignTimeBuild)'!='true' and '$(IsCrossTargetingBuild)'!='true' and '$(ImageOptimizerAvifEnabled)'=='true'">
+
+        <Message Importance="high" Text="Running Soenneker.Gen.Razor.ImageOptimizer.Avif: wwwroot=$(ImageOptimizerAvifWwwRootPath) progressive=$(ImageOptimizerAvifProgressive)" />
+        <Error Condition="'$(ImageOptimizerAvifBuildTasksDllPath)'==''" Text="ImageOptimizerAvifBuildTasksDllPath was not resolved." />
+        <Error Condition="!Exists('$(ImageOptimizerAvifBuildTasksDllPath)')" Text="AVIF image optimizer BuildTasks DLL not found at '$(ImageOptimizerAvifBuildTasksDllPath)'." />
+
+        <Exec WorkingDirectory="$(_ImageOptimizerAvifProjectDir)"
+              IgnoreExitCode="false"
+              ConsoleToMSBuild="true"
+              StandardOutputImportance="high"
+              StandardErrorImportance="high"
+              Command='dotnet exec &quot;$(ImageOptimizerAvifBuildTasksDllPath)&quot; --projectDir &quot;$(_ImageOptimizerAvifProjectDir)&quot; --wwwRoot &quot;$(ImageOptimizerAvifWwwRootPath)&quot; --sourceExtensions &quot;$(ImageOptimizerAvifSourceExtensions)&quot; --quality &quot;$(ImageOptimizerAvifQuality)&quot; --speed &quot;$(ImageOptimizerAvifSpeed)&quot; --lossless &quot;$(ImageOptimizerAvifLossless)&quot; --progressive &quot;$(ImageOptimizerAvifProgressive)&quot; --stripMetadata &quot;$(ImageOptimizerAvifStripMetadata)&quot; --force &quot;$(ImageOptimizerAvifForce)&quot; --failOnError &quot;$(ImageOptimizerAvifFailOnError)&quot;$(_ImageOptimizerAvifOutputPathArg)' />
+    </Target>
+</Project>
