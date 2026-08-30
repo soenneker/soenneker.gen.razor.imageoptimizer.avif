@@ -12,7 +12,6 @@ using Soenneker.Libvips.Util.Options;
 
 namespace Soenneker.Gen.Razor.ImageOptimizer.Avif.BuildTasks;
 
-/// <inheritdoc cref="IImageOptimizerAvifWriteRunner"/>
 public sealed class ImageOptimizerAvifWriteRunner : IImageOptimizerAvifWriteRunner
 {
     private readonly ILibvipsUtil _libvipsUtil;
@@ -117,13 +116,24 @@ public sealed class ImageOptimizerAvifWriteRunner : IImageOptimizerAvifWriteRunn
                 }
 
                 string intermediate = Path.Combine(temporaryDirectory, $"{Guid.NewGuid():N}.png");
+                string temporaryOutput = Path.Combine(temporaryDirectory, $"{Guid.NewGuid():N}.avif");
 
                 try
                 {
                     await _libvipsUtil.Convert(source, intermediate, new LibvipsOptions {StripMetadata = options.StripMetadata}, cancellationToken);
-                    await _libavifUtil.Encode(intermediate, output, options, cancellationToken);
+                    await _libavifUtil.Encode(intermediate, temporaryOutput, options, cancellationToken);
+
+                    string? outputDirectory = Path.GetDirectoryName(output);
+                    if (outputDirectory is not null)
+                        Directory.CreateDirectory(outputDirectory);
+
+                    File.Move(temporaryOutput, output, true);
                     generated++;
                     Console.WriteLine($"Optimized {Path.GetRelativePath(wwwRoot, source)} -> {output}");
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    throw;
                 }
                 catch (Exception exception)
                 {
@@ -135,6 +145,7 @@ public sealed class ImageOptimizerAvifWriteRunner : IImageOptimizerAvifWriteRunn
                 finally
                 {
                     File.Delete(intermediate);
+                    File.Delete(temporaryOutput);
                 }
             }
         }
