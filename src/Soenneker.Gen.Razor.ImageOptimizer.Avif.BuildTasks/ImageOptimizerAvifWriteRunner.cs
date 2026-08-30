@@ -116,16 +116,14 @@ public sealed class ImageOptimizerAvifWriteRunner : IImageOptimizerAvifWriteRunn
                 }
 
                 string intermediate = Path.Combine(temporaryDirectory, $"{Guid.NewGuid():N}.png");
-                string temporaryOutput = Path.Combine(temporaryDirectory, $"{Guid.NewGuid():N}.avif");
+                string outputDirectory = Path.GetDirectoryName(output)!;
+                Directory.CreateDirectory(outputDirectory);
+                string temporaryOutput = Path.Combine(outputDirectory, $".{Path.GetFileName(output)}.{Guid.NewGuid():N}.tmp.avif");
 
                 try
                 {
                     await _libvipsUtil.Convert(source, intermediate, new LibvipsOptions {StripMetadata = options.StripMetadata}, cancellationToken);
                     await _libavifUtil.Encode(intermediate, temporaryOutput, options, cancellationToken);
-
-                    string? outputDirectory = Path.GetDirectoryName(output);
-                    if (outputDirectory is not null)
-                        Directory.CreateDirectory(outputDirectory);
 
                     File.Move(temporaryOutput, output, true);
                     generated++;
