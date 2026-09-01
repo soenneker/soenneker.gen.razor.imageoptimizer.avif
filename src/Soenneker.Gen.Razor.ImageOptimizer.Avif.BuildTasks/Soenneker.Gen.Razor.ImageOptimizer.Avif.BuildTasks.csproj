@@ -14,8 +14,8 @@
 
     <ItemGroup>
         <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.11" />
-        <PackageReference Include="Soenneker.Libavif.Util" Version="4.0.20" />
-        <PackageReference Include="Soenneker.Libvips.Util" Version="4.0.22" />
+        <PackageReference Include="Soenneker.Libavif.Util" Version="4.0.21" />
+        <PackageReference Include="Soenneker.Libvips.Util" Version="4.0.24" />
         <PackageReference Include="Soenneker.Utils.Directory" Version="4.0.916" />
         <PackageReference Include="Soenneker.Utils.File" Version="4.0.2246" />
         <PackageReference Include="Soenneker.Utils.Path" Version="4.0.1209" />
