@@ -15,12 +15,12 @@
     </PropertyGroup>
 
     <PropertyGroup>
-        <Description>Build-time progressive AVIF image optimization for Razor applications using libvips and libavif.</Description>
+        <Description>Build-time progressive AVIF image optimization for Razor applications using libavif.</Description>
         <Version Condition="'$(BUILD_VERSION)' == ''">4.0.0</Version>
         <Version Condition="'$(BUILD_VERSION)' != ''">$(BUILD_VERSION)</Version>
         <AssemblyName>Soenneker.Gen.Razor.ImageOptimizer.Avif</AssemblyName>
         <PackageId>Soenneker.Gen.Razor.ImageOptimizer.Avif</PackageId>
-        <PackageTags>gen razor imageoptimizer avif generator image optimizer progressive libavif libvips externalgenerator imageoptimizeravif</PackageTags>
+        <PackageTags>gen razor imageoptimizer avif generator image optimizer progressive libavif externalgenerator imageoptimizeravif</PackageTags>
         <Copyright>Copyright © 2026 Jake Soenneker</Copyright>
         <Authors>Jake Soenneker</Authors>
         <Company>https://soenneker.com</Company>

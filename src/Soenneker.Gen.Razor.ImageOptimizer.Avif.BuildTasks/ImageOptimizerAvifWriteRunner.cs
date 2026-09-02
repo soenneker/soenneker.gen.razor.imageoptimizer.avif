@@ -7,30 +7,22 @@ using System.Threading.Tasks;
 using Soenneker.Gen.Razor.ImageOptimizer.Avif.BuildTasks.Abstract;
 using Soenneker.Libavif.Util.Abstract;
 using Soenneker.Libavif.Util.Options;
-using Soenneker.Libvips.Util.Abstract;
-using Soenneker.Libvips.Util.Options;
 using Soenneker.Utils.Directory.Abstract;
 using Soenneker.Utils.File.Abstract;
-using Soenneker.Utils.Path.Abstract;
 
 namespace Soenneker.Gen.Razor.ImageOptimizer.Avif.BuildTasks;
 
 public sealed class ImageOptimizerAvifWriteRunner : IImageOptimizerAvifWriteRunner
 {
-    private readonly ILibvipsUtil _libvipsUtil;
     private readonly ILibavifUtil _libavifUtil;
     private readonly IDirectoryUtil _directoryUtil;
     private readonly IFileUtil _fileUtil;
-    private readonly IPathUtil _pathUtil;
 
-    public ImageOptimizerAvifWriteRunner(ILibvipsUtil libvipsUtil, ILibavifUtil libavifUtil, IDirectoryUtil directoryUtil, IFileUtil fileUtil,
-        IPathUtil pathUtil)
+    public ImageOptimizerAvifWriteRunner(ILibavifUtil libavifUtil, IDirectoryUtil directoryUtil, IFileUtil fileUtil)
     {
-        _libvipsUtil = libvipsUtil ?? throw new ArgumentNullException(nameof(libvipsUtil));
         _libavifUtil = libavifUtil ?? throw new ArgumentNullException(nameof(libavifUtil));
         _directoryUtil = directoryUtil;
         _fileUtil = fileUtil;
-        _pathUtil = pathUtil;
     }
 
     public async ValueTask<int> Run(string[] args, CancellationToken cancellationToken)
@@ -84,81 +76,70 @@ public sealed class ImageOptimizerAvifWriteRunner : IImageOptimizerAvifWriteRunn
                            .Where(path => extensions.Contains(Path.GetExtension(path)))
                            .OrderBy(path => path, StringComparer.OrdinalIgnoreCase).ToArray();
 
-        string temporaryDirectory = await _pathUtil.GetUniqueTempDirectory("soenneker-imageoptimizer-avif", cancellationToken: cancellationToken);
         var generated = 0;
         var skipped = 0;
         var failed = 0;
         var claimedOutputs = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
-        try
+        foreach (string source in sources)
         {
-            foreach (string source in sources)
+            cancellationToken.ThrowIfCancellationRequested();
+            string output = GetOutputPath(source, wwwRoot, outputRoot);
+
+            if (string.Equals(source, output, StringComparison.OrdinalIgnoreCase))
             {
-                cancellationToken.ThrowIfCancellationRequested();
-                string output = GetOutputPath(source, wwwRoot, outputRoot);
-
-                if (string.Equals(source, output, StringComparison.OrdinalIgnoreCase))
-                {
-                    failed++;
-                    await Console.Error.WriteLineAsync(
-                        $"Refusing to overwrite source image '{source}'. Remove 'avif' from ImageOptimizerAvifSourceExtensions.");
-                    if (failOnError)
-                        return 1;
-                    continue;
-                }
-
-                if (claimedOutputs.TryGetValue(output, out string? claimedBy) &&
-                    !string.Equals(source, claimedBy, StringComparison.OrdinalIgnoreCase))
-                {
-                    failed++;
-                    await Console.Error.WriteLineAsync($"Output collision: '{source}' and '{claimedBy}' both map to '{output}'.");
-                    if (failOnError)
-                        return 1;
-                    continue;
-                }
-
-                claimedOutputs[output] = source;
-                if (!force && await IsUpToDate(source, output, cancellationToken))
-                {
-                    skipped++;
-                    continue;
-                }
-
-                string intermediate = Path.Combine(temporaryDirectory, $"{Guid.NewGuid():N}.png");
-                string outputDirectory = Path.GetDirectoryName(output)!;
-                await _directoryUtil.Create(outputDirectory, log: false, cancellationToken);
-                string temporaryOutput = Path.Combine(outputDirectory, $".{Path.GetFileName(output)}.{Guid.NewGuid():N}.tmp.avif");
-
-                try
-                {
-                    await _libvipsUtil.Convert(source, intermediate, new LibvipsOptions {StripMetadata = options.StripMetadata}, cancellationToken);
-                    await _libavifUtil.Encode(intermediate, temporaryOutput, options, cancellationToken);
-
-                    await _fileUtil.Move(temporaryOutput, output, log: false, cancellationToken);
-                    generated++;
-                    Console.WriteLine($"Optimized {Path.GetRelativePath(wwwRoot, source)} -> {output}");
-                }
-                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-                {
-                    throw;
-                }
-                catch (Exception exception)
-                {
-                    failed++;
-                    await Console.Error.WriteLineAsync($"Failed to optimize '{source}' as AVIF: {exception.Message}");
-                    if (failOnError)
-                        return 1;
-                }
-                finally
-                {
-                    await _fileUtil.TryDelete(intermediate, log: false, CancellationToken.None);
-                    await _fileUtil.TryDelete(temporaryOutput, log: false, CancellationToken.None);
-                }
+                failed++;
+                await Console.Error.WriteLineAsync(
+                    $"Refusing to overwrite source image '{source}'. Remove 'avif' from ImageOptimizerAvifSourceExtensions.");
+                if (failOnError)
+                    return 1;
+                continue;
             }
-        }
-        finally
-        {
-            await _directoryUtil.DeleteIfExists(temporaryDirectory, CancellationToken.None);
+
+            if (claimedOutputs.TryGetValue(output, out string? claimedBy) &&
+                !string.Equals(source, claimedBy, StringComparison.OrdinalIgnoreCase))
+            {
+                failed++;
+                await Console.Error.WriteLineAsync($"Output collision: '{source}' and '{claimedBy}' both map to '{output}'.");
+                if (failOnError)
+                    return 1;
+                continue;
+            }
+
+            claimedOutputs[output] = source;
+            if (!force && await IsUpToDate(source, output, cancellationToken))
+            {
+                skipped++;
+                continue;
+            }
+
+            string outputDirectory = Path.GetDirectoryName(output)!;
+            await _directoryUtil.Create(outputDirectory, log: false, cancellationToken);
+            string temporaryOutput = Path.Combine(outputDirectory, $".{Path.GetFileName(output)}.{Guid.NewGuid():N}.tmp.avif");
+
+            try
+            {
+                await _libavifUtil.Encode(source, temporaryOutput, options, cancellationToken);
+
+                await _fileUtil.Move(temporaryOutput, output, log: false, cancellationToken);
+                generated++;
+                Console.WriteLine($"Optimized {Path.GetRelativePath(wwwRoot, source)} -> {output}");
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                failed++;
+                await Console.Error.WriteLineAsync($"Failed to optimize '{source}' as AVIF: {exception.Message}");
+                if (failOnError)
+                    return 1;
+            }
+            finally
+            {
+                await _fileUtil.TryDelete(temporaryOutput, log: false, CancellationToken.None);
+            }
         }
 
         Console.WriteLine($"Soenneker.Gen.Razor.ImageOptimizer.Avif: {sources.Length} source(s), {generated} generated, {skipped} up-to-date, {failed} failed.");

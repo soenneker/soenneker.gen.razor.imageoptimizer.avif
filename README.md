@@ -12,7 +12,7 @@
 dotnet add package Soenneker.Gen.Razor.ImageOptimizer.Avif
 ```
 
-On each non-design-time build, the package scans `wwwroot` recursively for PNG and JPEG files, normalizes each source with libvips, and writes a sibling `.avif` file through libavif. Existing output is replaced only after a complete encode succeeds.
+On each non-design-time build, the package scans `wwwroot` recursively for PNG and JPEG files and writes a sibling `.avif` file through libavif. Existing output is replaced only after a complete encode succeeds.
 
 No application code or service registration is required.
 
