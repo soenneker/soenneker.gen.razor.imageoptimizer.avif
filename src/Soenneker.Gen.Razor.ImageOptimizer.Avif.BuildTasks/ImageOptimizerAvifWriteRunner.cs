@@ -12,6 +12,7 @@ using Soenneker.Utils.File.Abstract;
 
 namespace Soenneker.Gen.Razor.ImageOptimizer.Avif.BuildTasks;
 
+/// <inheritdoc cref="IImageOptimizerAvifWriteRunner" />
 public sealed class ImageOptimizerAvifWriteRunner : IImageOptimizerAvifWriteRunner
 {
     private readonly ILibavifUtil _libavifUtil;
