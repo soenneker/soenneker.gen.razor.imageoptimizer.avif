@@ -1,6 +1,7 @@
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 
     <PropertyGroup>
+        <_ImageOptimizerAvifTargetsPath>$(MSBuildThisFileFullPath)</_ImageOptimizerAvifTargetsPath>
         <_ImageOptimizerAvifBuildTasksDllFromPackage>$([System.IO.Path]::Combine('$(MSBuildThisFileDirectory)', 'Soenneker.Gen.Razor.ImageOptimizer.Avif.BuildTasks.dll'))</_ImageOptimizerAvifBuildTasksDllFromPackage>
         <_ImageOptimizerAvifBuildTasksDllFromBuildTransitive>$([System.IO.Path]::GetFullPath($([System.IO.Path]::Combine('$(MSBuildThisFileDirectory)', '..', 'buildTransitive', 'Soenneker.Gen.Razor.ImageOptimizer.Avif.BuildTasks.dll'))))</_ImageOptimizerAvifBuildTasksDllFromBuildTransitive>
         <_ImageOptimizerAvifBuildTasksDllFromProject>$([System.IO.Path]::GetFullPath($([System.IO.Path]::Combine('$(MSBuildThisFileDirectory)', '..', 'Soenneker.Gen.Razor.ImageOptimizer.Avif.BuildTasks', 'bin', '$(Configuration)', 'Soenneker.Gen.Razor.ImageOptimizer.Avif.BuildTasks.dll'))))</_ImageOptimizerAvifBuildTasksDllFromProject>
@@ -24,7 +25,45 @@
         <_ImageOptimizerAvifOutputPathArg Condition="'$(ImageOptimizerAvifOutputPath)'!=''"> --outputPath &quot;$(ImageOptimizerAvifOutputPath)&quot;</_ImageOptimizerAvifOutputPathArg>
     </PropertyGroup>
 
+
+    <!-- Keep the inventory outside the generated asset directories. Recording file names
+         and timestamps catches additions, removals, missing outputs, and option changes. -->
+    <Target Name="PrepareImageOptimizerAvifInputs"
+            Condition="'$(DesignTimeBuild)'!='true' and '$(IsCrossTargetingBuild)'!='true' and '$(ImageOptimizerAvifEnabled)'=='true'">
+        <PropertyGroup>
+            <_ImageOptimizerAvifInputManifest>$(IntermediateOutputPath)imageoptimizer-avif.inputs</_ImageOptimizerAvifInputManifest>
+            <_ImageOptimizerAvifSuccessStamp>$(IntermediateOutputPath)imageoptimizer-avif.stamp</_ImageOptimizerAvifSuccessStamp>
+        </PropertyGroup>
+        <MakeDir Directories="$(IntermediateOutputPath)" />
+        <ItemGroup>
+            <_ImageOptimizerAvifTrackedFiles Remove="@(_ImageOptimizerAvifTrackedFiles)" />
+            <_ImageOptimizerAvifTrackedFiles Include="$(ImageOptimizerAvifWwwRootPath)/**/*" Exclude="$(_ImageOptimizerAvifInputManifest);$(_ImageOptimizerAvifSuccessStamp)" />
+            <_ImageOptimizerAvifTrackedFiles Include="$(ImageOptimizerAvifOutputPath)/**/*" Exclude="$(_ImageOptimizerAvifInputManifest);$(_ImageOptimizerAvifSuccessStamp)" Condition="'$(ImageOptimizerAvifOutputPath)'!=''" />
+            <_ImageOptimizerAvifTrackedFiles Include="$(ImageOptimizerAvifManifestPath)" Condition="'$(ImageOptimizerAvifManifestPath)'!='' and Exists('$(ImageOptimizerAvifManifestPath)')" />
+            <_ImageOptimizerAvifTrackedFiles Include="$(ImageOptimizerAvifCachePath)" Condition="'$(ImageOptimizerAvifCachePath)'!='' and Exists('$(ImageOptimizerAvifCachePath)')" />
+            <_ImageOptimizerAvifTrackedFiles Include="$(_ImageOptimizerAvifTargetsPath);$(MSBuildProjectFullPath);$(MSBuildAllProjects);$(ProjectAssetsFile);$(ImageOptimizerAvifBuildTasksDllPath)" />
+        </ItemGroup>
+        <ItemGroup>
+            <_ImageOptimizerAvifHashInputs Remove="@(_ImageOptimizerAvifHashInputs)" />
+            <_ImageOptimizerAvifHashedInputs Remove="@(_ImageOptimizerAvifHashedInputs)" />
+            <_ImageOptimizerAvifHashCandidates Remove="@(_ImageOptimizerAvifHashCandidates)" />
+            <_ImageOptimizerAvifHashCandidates Include="$(ImageOptimizerAvifWwwRootPath)/**/*" />
+            <_ImageOptimizerAvifHashInputs Include="@(_ImageOptimizerAvifHashCandidates)"
+                Condition="$([System.String]::Copy(';$(ImageOptimizerAvifSourceExtensions);').Replace(',', ';').Replace('.', '').Replace(' ', '').ToLowerInvariant().Contains(';$([System.String]::Copy('%(_ImageOptimizerAvifHashCandidates.Extension)').TrimStart('.').ToLowerInvariant());'))" />
+        </ItemGroup>
+        <GetFileHash Files="@(_ImageOptimizerAvifHashInputs)">
+            <Output TaskParameter="Items" ItemName="_ImageOptimizerAvifHashedInputs" />
+        </GetFileHash>
+        <WriteLinesToFile File="$(_ImageOptimizerAvifInputManifest)"
+                          Lines="@(_ImageOptimizerAvifHashedInputs->'%(FullPath)|%(FileHash)');@(_ImageOptimizerAvifTrackedFiles->'%(FullPath)|%(ModifiedTime)');ImageOptimizerAvifOutputPath=$(ImageOptimizerAvifOutputPath);ImageOptimizerAvifBuildTasksDllPath=$(ImageOptimizerAvifBuildTasksDllPath);ImageOptimizerAvifCachePath=$(ImageOptimizerAvifCachePath);ImageOptimizerAvifEnabled=$(ImageOptimizerAvifEnabled);ImageOptimizerAvifFailOnError=$(ImageOptimizerAvifFailOnError);ImageOptimizerAvifForce=$(ImageOptimizerAvifForce);ImageOptimizerAvifLossless=$(ImageOptimizerAvifLossless);ImageOptimizerAvifManifestPath=$(ImageOptimizerAvifManifestPath);ImageOptimizerAvifProgressive=$(ImageOptimizerAvifProgressive);ImageOptimizerAvifQuality=$(ImageOptimizerAvifQuality);ImageOptimizerAvifSourceExtensions=$(ImageOptimizerAvifSourceExtensions);ImageOptimizerAvifSpeed=$(ImageOptimizerAvifSpeed);ImageOptimizerAvifStripMetadata=$(ImageOptimizerAvifStripMetadata);ImageOptimizerAvifWidths=$(ImageOptimizerAvifWidths);ImageOptimizerAvifWwwRootPath=$(ImageOptimizerAvifWwwRootPath)"
+                          Overwrite="true" WriteOnlyWhenDifferent="true" />
+        <Delete Files="$(_ImageOptimizerAvifSuccessStamp)" Condition="'$(ImageOptimizerAvifForce)'=='true' or '$(ImageOptimizerAvifFailOnError)'!='true'" />
+    </Target>
+
     <Target Name="RunRazorImageOptimizerAvifBuildTasks"
+            DependsOnTargets="PrepareImageOptimizerAvifInputs"
+            Inputs="$(_ImageOptimizerAvifInputManifest)"
+            Outputs="$(_ImageOptimizerAvifSuccessStamp)"
             BeforeTargets="BeforeBuild"
             Condition="'$(DesignTimeBuild)'!='true' and '$(IsCrossTargetingBuild)'!='true' and '$(ImageOptimizerAvifEnabled)'=='true'">
 
@@ -38,5 +77,29 @@
               StandardOutputImportance="high"
               StandardErrorImportance="high"
               Command='dotnet exec &quot;$(ImageOptimizerAvifBuildTasksDllPath)&quot; --projectDir &quot;$(_ImageOptimizerAvifProjectDir)&quot; --wwwRoot &quot;$(ImageOptimizerAvifWwwRootPath)&quot; --sourceExtensions &quot;$(ImageOptimizerAvifSourceExtensions)&quot; --quality &quot;$(ImageOptimizerAvifQuality)&quot; --speed &quot;$(ImageOptimizerAvifSpeed)&quot; --lossless &quot;$(ImageOptimizerAvifLossless)&quot; --progressive &quot;$(ImageOptimizerAvifProgressive)&quot; --stripMetadata &quot;$(ImageOptimizerAvifStripMetadata)&quot; --force &quot;$(ImageOptimizerAvifForce)&quot; --failOnError &quot;$(ImageOptimizerAvifFailOnError)&quot;$(_ImageOptimizerAvifOutputPathArg)' />
+        <ItemGroup>
+            <_ImageOptimizerAvifTrackedFiles Remove="@(_ImageOptimizerAvifTrackedFiles)" />
+            <_ImageOptimizerAvifTrackedFiles Include="$(ImageOptimizerAvifWwwRootPath)/**/*" Exclude="$(_ImageOptimizerAvifInputManifest);$(_ImageOptimizerAvifSuccessStamp)" />
+            <_ImageOptimizerAvifTrackedFiles Include="$(ImageOptimizerAvifOutputPath)/**/*" Exclude="$(_ImageOptimizerAvifInputManifest);$(_ImageOptimizerAvifSuccessStamp)" Condition="'$(ImageOptimizerAvifOutputPath)'!=''" />
+            <_ImageOptimizerAvifTrackedFiles Include="$(ImageOptimizerAvifManifestPath)" Condition="'$(ImageOptimizerAvifManifestPath)'!='' and Exists('$(ImageOptimizerAvifManifestPath)')" />
+            <_ImageOptimizerAvifTrackedFiles Include="$(ImageOptimizerAvifCachePath)" Condition="'$(ImageOptimizerAvifCachePath)'!='' and Exists('$(ImageOptimizerAvifCachePath)')" />
+            <_ImageOptimizerAvifTrackedFiles Include="$(_ImageOptimizerAvifTargetsPath);$(MSBuildProjectFullPath);$(MSBuildAllProjects);$(ProjectAssetsFile);$(ImageOptimizerAvifBuildTasksDllPath)" />
+        </ItemGroup>
+        <ItemGroup>
+            <_ImageOptimizerAvifHashInputs Remove="@(_ImageOptimizerAvifHashInputs)" />
+            <_ImageOptimizerAvifHashedInputs Remove="@(_ImageOptimizerAvifHashedInputs)" />
+            <_ImageOptimizerAvifHashCandidates Remove="@(_ImageOptimizerAvifHashCandidates)" />
+            <_ImageOptimizerAvifHashCandidates Include="$(ImageOptimizerAvifWwwRootPath)/**/*" />
+            <_ImageOptimizerAvifHashInputs Include="@(_ImageOptimizerAvifHashCandidates)"
+                Condition="$([System.String]::Copy(';$(ImageOptimizerAvifSourceExtensions);').Replace(',', ';').Replace('.', '').Replace(' ', '').ToLowerInvariant().Contains(';$([System.String]::Copy('%(_ImageOptimizerAvifHashCandidates.Extension)').TrimStart('.').ToLowerInvariant());'))" />
+        </ItemGroup>
+        <GetFileHash Files="@(_ImageOptimizerAvifHashInputs)">
+            <Output TaskParameter="Items" ItemName="_ImageOptimizerAvifHashedInputs" />
+        </GetFileHash>
+        <WriteLinesToFile File="$(_ImageOptimizerAvifInputManifest)"
+                          Lines="@(_ImageOptimizerAvifHashedInputs->'%(FullPath)|%(FileHash)');@(_ImageOptimizerAvifTrackedFiles->'%(FullPath)|%(ModifiedTime)');ImageOptimizerAvifOutputPath=$(ImageOptimizerAvifOutputPath);ImageOptimizerAvifBuildTasksDllPath=$(ImageOptimizerAvifBuildTasksDllPath);ImageOptimizerAvifCachePath=$(ImageOptimizerAvifCachePath);ImageOptimizerAvifEnabled=$(ImageOptimizerAvifEnabled);ImageOptimizerAvifFailOnError=$(ImageOptimizerAvifFailOnError);ImageOptimizerAvifForce=$(ImageOptimizerAvifForce);ImageOptimizerAvifLossless=$(ImageOptimizerAvifLossless);ImageOptimizerAvifManifestPath=$(ImageOptimizerAvifManifestPath);ImageOptimizerAvifProgressive=$(ImageOptimizerAvifProgressive);ImageOptimizerAvifQuality=$(ImageOptimizerAvifQuality);ImageOptimizerAvifSourceExtensions=$(ImageOptimizerAvifSourceExtensions);ImageOptimizerAvifSpeed=$(ImageOptimizerAvifSpeed);ImageOptimizerAvifStripMetadata=$(ImageOptimizerAvifStripMetadata);ImageOptimizerAvifWidths=$(ImageOptimizerAvifWidths);ImageOptimizerAvifWwwRootPath=$(ImageOptimizerAvifWwwRootPath)"
+                          Overwrite="true" WriteOnlyWhenDifferent="true" />
+        <Touch Files="$(_ImageOptimizerAvifSuccessStamp)" AlwaysCreate="true" />
     </Target>
+
 </Project>
