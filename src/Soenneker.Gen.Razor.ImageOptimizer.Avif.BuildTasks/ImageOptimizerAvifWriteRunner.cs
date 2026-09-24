@@ -56,6 +56,7 @@ public sealed class ImageOptimizerAvifWriteRunner : IImageOptimizerAvifWriteRunn
         bool progressive = ParseBoolean(GetOptional(map, "--progressive"), true);
         bool stripMetadata = ParseBoolean(GetOptional(map, "--stripMetadata"), true);
         bool force = ParseBoolean(GetOptional(map, "--force"), false);
+        bool warnOnSkippedWidths = ParseBoolean(GetOptional(map, "--warnOnSkippedWidths"), false);
         bool failOnError = ParseBoolean(GetOptional(map, "--failOnError"), true);
         string widthList = GetOptional(map, "--widths") ?? "480;960;1440";
         var widths = new SortedSet<int>();
@@ -88,11 +89,11 @@ public sealed class ImageOptimizerAvifWriteRunner : IImageOptimizerAvifWriteRunn
             StripMetadata = stripMetadata
         };
 
-        return await Optimize(wwwRoot, outputRoot, sourceExtensions, options, widths, manifestPath, cachePath, force, failOnError, cancellationToken);
+        return await Optimize(wwwRoot, outputRoot, sourceExtensions, options, widths, manifestPath, cachePath, force, failOnError, warnOnSkippedWidths, cancellationToken);
     }
 
     private async ValueTask<int> Optimize(string wwwRoot, string? outputRoot, IReadOnlyCollection<string> sourceExtensions,
-        AvifEncodeOptions options, SortedSet<int> widths, string manifestPath, string cachePath, bool force, bool failOnError,
+        AvifEncodeOptions options, SortedSet<int> widths, string manifestPath, string cachePath, bool force, bool failOnError, bool warnOnSkippedWidths,
         CancellationToken cancellationToken)
     {
         string destinationRoot = outputRoot ?? wwwRoot;
@@ -136,7 +137,8 @@ public sealed class ImageOptimizerAvifWriteRunner : IImageOptimizerAvifWriteRunn
                     entry.Fingerprint == fingerprint && entry.Variants.Count > 0 &&
                     entry.Variants.All(variant => File.Exists(Path.Combine(destinationRoot, variant.Path))))
                 {
-                    WarnSkippedWidths(source, entry.Variants.Max(variant => variant.Width), widths);
+                    if (warnOnSkippedWidths)
+                        WarnSkippedWidths(source, entry.Variants.Max(variant => variant.Width), widths);
                     cache[source] = entry;
                     manifest.Images[RelativePath(wwwRoot, source)] = entry.Variants;
                     skipped += entry.Variants.Count;
@@ -145,13 +147,15 @@ public sealed class ImageOptimizerAvifWriteRunner : IImageOptimizerAvifWriteRunn
 
                 ImageInfo sourceInfo = await _libvipsUtil.Identify(source, cancellationToken);
                 int sourceWidth = sourceInfo.Width;
+                int sourceHeight = sourceInfo.Height;
                 if (sourceInfo.TryGetMetadata("orientation", out string? orientation) &&
                     int.TryParse(orientation, out int value) && value is >= 5 and <= 8)
-                    sourceWidth = sourceInfo.Height;
+                    (sourceWidth, sourceHeight) = (sourceHeight, sourceWidth);
                 if (sourceWidth <= 0 || sourceInfo.Height <= 0)
                     throw new InvalidDataException("The source image has invalid dimensions.");
 
-                WarnSkippedWidths(source, sourceWidth, widths);
+                if (warnOnSkippedWidths)
+                    WarnSkippedWidths(source, sourceWidth, widths);
 
                 string output = GetOutputPath(source, wwwRoot, outputRoot);
                 await _directoryUtil.Create(Path.GetDirectoryName(output)!, log: false, cancellationToken);
@@ -160,7 +164,7 @@ public sealed class ImageOptimizerAvifWriteRunner : IImageOptimizerAvifWriteRunn
                 foreach (int width in widths.Where(width => width < sourceWidth).Append(sourceWidth))
                 {
                     string path = width == sourceWidth ? output : VariantPath(output, width);
-                    AvifImageVariant variant = await EncodeVariant(source, path, destinationRoot, width, options, cancellationToken);
+                    AvifImageVariant variant = await EncodeVariant(source, path, destinationRoot, width, sourceHeight, width == sourceWidth, options, cancellationToken);
                     variants.Add(variant);
                     generated++;
                     Console.WriteLine($"Optimized {RelativePath(wwwRoot, source)} -> {path} ({variant.Width}x{variant.Height})");
@@ -188,7 +192,7 @@ public sealed class ImageOptimizerAvifWriteRunner : IImageOptimizerAvifWriteRunn
         return 0;
     }
 
-    private async ValueTask<AvifImageVariant> EncodeVariant(string source, string output, string outputRoot, int width,
+    private async ValueTask<AvifImageVariant> EncodeVariant(string source, string output, string outputRoot, int width, int sourceHeight, bool fullSize,
         AvifEncodeOptions options, CancellationToken cancellationToken)
     {
         // PNG is a lossless intermediate; libavif still handles the progressive AVIF encode.
@@ -198,8 +202,16 @@ public sealed class ImageOptimizerAvifWriteRunner : IImageOptimizerAvifWriteRunn
         string temporaryOutput = temporaryBase + ".avif";
         try
         {
-            await _libvipsUtil.Resize(source, temporaryInput, width, options: new PngOptions { StripMetadata = false },
-                cancellationToken: cancellationToken);
+            if (fullSize)
+            {
+                await _libvipsUtil.AutoRotate(source, temporaryInput, new PngOptions { StripMetadata = false }, cancellationToken);
+            }
+            else
+            {
+                // An explicit height bound keeps portraits constrained by width instead of a square.
+                await _libvipsUtil.Resize(source, temporaryInput, width, sourceHeight, options: new PngOptions { StripMetadata = false },
+                    cancellationToken: cancellationToken);
+            }
             await _libavifUtil.Encode(temporaryInput, temporaryOutput, options, cancellationToken);
             ImageInfo encoded = await _libvipsUtil.Identify(temporaryOutput, cancellationToken);
             if (encoded.Width != width || encoded.Height <= 0)

@@ -78,7 +78,10 @@ public sealed class ImageOptimizerAvifTests
     }
 
     [Test]
-    public async Task Small_images_and_separate_output_roots_have_truthful_manifest_paths()
+    [Arguments(32, 16)]
+    [Arguments(32, 64)]
+    [Arguments(480, 960)]
+    public async Task Small_images_and_separate_output_roots_have_truthful_manifest_paths(int width, int height)
     {
         using IHost host = Program.CreateHostBuilder([]).Build();
         var vips = host.Services.GetRequiredService<ILibvipsUtil>();
@@ -87,14 +90,44 @@ public sealed class ImageOptimizerAvifTests
         try
         {
             string image = Path.Combine(root, "wwwroot", "tiny.png");
-            await vips.Run($"black \"{image}\" 32 16 --bands 3", log: false);
-            (await runner.Run(["--projectDir", root, "--outputPath", "generated", "--speed", "10"], CancellationToken.None)).Should().Be(0);
+            await vips.Run($"black \"{image}\" {width} {height} --bands 3", log: false);
+            string[] args = ["--projectDir", root, "--outputPath", "generated", "--speed", "10"];
+            (await runner.Run(args, CancellationToken.None)).Should().Be(0);
+            (await runner.Run(args, CancellationToken.None)).Should().Be(0);
+            TestContext.Current!.Output.GetStandardOutput().Should().NotContain("warning AVIF001");
+            (await runner.Run([..args, "--warnOnSkippedWidths", "true"], CancellationToken.None)).Should().Be(0);
+            TestContext.Current!.Output.GetStandardOutput().Should().Contain("warning AVIF001");
             using JsonDocument manifest = JsonDocument.Parse(await File.ReadAllTextAsync(Path.Combine(root, "generated", "image-variants.json")));
             JsonElement variants = manifest.RootElement.GetProperty("images").GetProperty("tiny.png");
             variants.GetArrayLength().Should().Be(1);
             variants[0].GetProperty("path").GetString().Should().Be("tiny.avif");
-            variants[0].GetProperty("width").GetInt32().Should().Be(32);
+            variants[0].GetProperty("width").GetInt32().Should().Be(width);
+            variants[0].GetProperty("height").GetInt32().Should().Be(height);
+            Directory.GetFiles(Path.Combine(root, "generated"), "*.avif").Should().HaveCount(1);
             Directory.GetFiles(Path.Combine(root, "wwwroot"), "*.avif").Should().BeEmpty();
+        }
+        finally { DeleteRoot(root); }
+    }
+
+    [Test]
+    public async Task Portrait_variants_use_requested_width_and_preserve_aspect_ratio()
+    {
+        using IHost host = Program.CreateHostBuilder([]).Build();
+        var vips = host.Services.GetRequiredService<ILibvipsUtil>();
+        var runner = host.Services.GetRequiredService<IImageOptimizerAvifWriteRunner>();
+        string root = CreateRoot();
+        try
+        {
+            string image = Path.Combine(root, "wwwroot", "portrait.png");
+            await vips.Run($"black \"{image}\" 600 1200 --bands 3", log: false);
+            (await runner.Run(["--projectDir", root, "--speed", "10"], CancellationToken.None)).Should().Be(0);
+            var resized = await vips.Identify(Path.Combine(root, "wwwroot", "portrait-480.avif"));
+            resized.Width.Should().Be(480);
+            resized.Height.Should().Be(960);
+            var full = await vips.Identify(Path.Combine(root, "wwwroot", "portrait.avif"));
+            full.Width.Should().Be(600);
+            full.Height.Should().Be(1200);
+            Directory.GetFiles(Path.Combine(root, "wwwroot"), "*.avif").Should().HaveCount(2);
         }
         finally { DeleteRoot(root); }
     }
