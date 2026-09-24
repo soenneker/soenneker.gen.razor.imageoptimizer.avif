@@ -9,7 +9,12 @@ namespace Soenneker.Gen.Razor.ImageOptimizer.Avif.BuildTasks.Abstract;
 public interface IImageOptimizerAvifWriteRunner
 {
     /// <summary>
-    /// Discovers configured source images and writes their AVIF counterparts.
+    /// Discovers source images, writes full-size and responsive AVIF files without upscaling,
+    /// and emits image-variants.json with paths relative to the output root and actual pixel dimensions.
+    /// The --widths argument accepts positive pixel widths separated by semicolons or commas
+    /// (480;960;1440 by default); "none" disables resized variants. Unchanged sources and settings
+    /// are skipped using the cache under obj/imageoptimizer-avif.
+    /// Emits build warning AVIF001 when a requested width exceeds the source width, including on cached builds.
     /// </summary>
     /// <param name="args">Optimizer command-line arguments supplied by the MSBuild target.</param>
     /// <param name="cancellationToken">Cancels discovery or conversion.</param>

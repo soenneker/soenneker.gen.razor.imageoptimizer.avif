@@ -17,6 +17,11 @@
         <ImageOptimizerAvifLossless Condition="'$(ImageOptimizerAvifLossless)'==''">false</ImageOptimizerAvifLossless>
         <ImageOptimizerAvifProgressive Condition="'$(ImageOptimizerAvifProgressive)'==''">true</ImageOptimizerAvifProgressive>
         <ImageOptimizerAvifStripMetadata Condition="'$(ImageOptimizerAvifStripMetadata)'==''">true</ImageOptimizerAvifStripMetadata>
+        <!-- Use "none" for full-size output only. Variants never upscale the source. -->
+        <ImageOptimizerAvifWidths Condition="'$(ImageOptimizerAvifWidths)'==''">480;960;1440</ImageOptimizerAvifWidths>
+        <ImageOptimizerAvifManifestPath Condition="'$(ImageOptimizerAvifManifestPath)'=='' and '$(ImageOptimizerAvifOutputPath)'==''">$(ImageOptimizerAvifWwwRootPath)/image-variants.json</ImageOptimizerAvifManifestPath>
+        <ImageOptimizerAvifManifestPath Condition="'$(ImageOptimizerAvifManifestPath)'==''">$(ImageOptimizerAvifOutputPath)/image-variants.json</ImageOptimizerAvifManifestPath>
+        <ImageOptimizerAvifCachePath Condition="'$(ImageOptimizerAvifCachePath)'==''">$(BaseIntermediateOutputPath)imageoptimizer-avif/cache.json</ImageOptimizerAvifCachePath>
         <ImageOptimizerAvifForce Condition="'$(ImageOptimizerAvifForce)'==''">false</ImageOptimizerAvifForce>
         <ImageOptimizerAvifFailOnError Condition="'$(ImageOptimizerAvifFailOnError)'==''">true</ImageOptimizerAvifFailOnError>
 
@@ -76,7 +81,7 @@
               ConsoleToMSBuild="true"
               StandardOutputImportance="high"
               StandardErrorImportance="high"
-              Command='dotnet exec &quot;$(ImageOptimizerAvifBuildTasksDllPath)&quot; --projectDir &quot;$(_ImageOptimizerAvifProjectDir)&quot; --wwwRoot &quot;$(ImageOptimizerAvifWwwRootPath)&quot; --sourceExtensions &quot;$(ImageOptimizerAvifSourceExtensions)&quot; --quality &quot;$(ImageOptimizerAvifQuality)&quot; --speed &quot;$(ImageOptimizerAvifSpeed)&quot; --lossless &quot;$(ImageOptimizerAvifLossless)&quot; --progressive &quot;$(ImageOptimizerAvifProgressive)&quot; --stripMetadata &quot;$(ImageOptimizerAvifStripMetadata)&quot; --force &quot;$(ImageOptimizerAvifForce)&quot; --failOnError &quot;$(ImageOptimizerAvifFailOnError)&quot;$(_ImageOptimizerAvifOutputPathArg)' />
+              Command='dotnet exec &quot;$(ImageOptimizerAvifBuildTasksDllPath)&quot; --projectDir &quot;$(_ImageOptimizerAvifProjectDir)&quot; --wwwRoot &quot;$(ImageOptimizerAvifWwwRootPath)&quot; --sourceExtensions &quot;$(ImageOptimizerAvifSourceExtensions)&quot; --quality &quot;$(ImageOptimizerAvifQuality)&quot; --speed &quot;$(ImageOptimizerAvifSpeed)&quot; --lossless &quot;$(ImageOptimizerAvifLossless)&quot; --progressive &quot;$(ImageOptimizerAvifProgressive)&quot; --stripMetadata &quot;$(ImageOptimizerAvifStripMetadata)&quot; --widths &quot;$(ImageOptimizerAvifWidths)&quot; --manifestPath &quot;$(ImageOptimizerAvifManifestPath)&quot; --cachePath &quot;$(ImageOptimizerAvifCachePath)&quot; --force &quot;$(ImageOptimizerAvifForce)&quot; --failOnError &quot;$(ImageOptimizerAvifFailOnError)&quot;$(_ImageOptimizerAvifOutputPathArg)' />
         <ItemGroup>
             <_ImageOptimizerAvifTrackedFiles Remove="@(_ImageOptimizerAvifTrackedFiles)" />
             <_ImageOptimizerAvifTrackedFiles Include="$(ImageOptimizerAvifWwwRootPath)/**/*" Exclude="$(_ImageOptimizerAvifInputManifest);$(_ImageOptimizerAvifSuccessStamp)" />
@@ -102,4 +107,16 @@
         <Touch Files="$(_ImageOptimizerAvifSuccessStamp)" AlwaysCreate="true" />
     </Target>
 
+    <Target Name="IncludeImageOptimizerAvifOutputs" BeforeTargets="BeforeBuild"
+            DependsOnTargets="RunRazorImageOptimizerAvifBuildTasks"
+            Condition="'$(DesignTimeBuild)'!='true' and '$(IsCrossTargetingBuild)'!='true' and '$(ImageOptimizerAvifEnabled)'=='true'">
+        <!-- The SDK evaluated its globs before these files existed on the first build. -->
+        <ItemGroup>
+            <Content Include="$(ImageOptimizerAvifWwwRootPath)/**/*.avif;$(ImageOptimizerAvifManifestPath)"
+                     Exclude="@(Content)"
+                     Condition="'$(ImageOptimizerAvifOutputPath)'==''"
+                     CopyToOutputDirectory="PreserveNewest"
+                     CopyToPublishDirectory="PreserveNewest" />
+        </ItemGroup>
+    </Target>
 </Project>
