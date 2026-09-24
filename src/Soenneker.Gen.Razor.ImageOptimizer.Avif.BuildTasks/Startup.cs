@@ -16,6 +16,5 @@ public static class Startup
         services.AddFileUtilAsSingleton();
         services.AddLibavifUtilAsSingleton();
         services.AddLibvipsUtilAsSingleton();
-        services.AddHostedService<ConsoleHostedService>();
     }
 }

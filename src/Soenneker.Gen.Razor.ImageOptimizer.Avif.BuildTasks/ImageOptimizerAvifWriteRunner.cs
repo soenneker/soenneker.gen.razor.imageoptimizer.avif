@@ -19,13 +19,16 @@ namespace Soenneker.Gen.Razor.ImageOptimizer.Avif.BuildTasks;
 
 public sealed class ImageOptimizerAvifWriteRunner : IImageOptimizerAvifWriteRunner
 {
-    private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase, WriteIndented = true };
+    private static readonly JsonSerializerOptions JsonOptions = new()
+        { PropertyNamingPolicy = JsonNamingPolicy.CamelCase, WriteIndented = true };
+
     private readonly ILibavifUtil _libavifUtil;
     private readonly ILibvipsUtil _libvipsUtil;
     private readonly IDirectoryUtil _directoryUtil;
     private readonly IFileUtil _fileUtil;
 
-    public ImageOptimizerAvifWriteRunner(ILibavifUtil libavifUtil, ILibvipsUtil libvipsUtil, IDirectoryUtil directoryUtil, IFileUtil fileUtil)
+    public ImageOptimizerAvifWriteRunner(ILibavifUtil libavifUtil, ILibvipsUtil libvipsUtil,
+        IDirectoryUtil directoryUtil, IFileUtil fileUtil)
     {
         _libavifUtil = libavifUtil ?? throw new ArgumentNullException(nameof(libavifUtil));
         _libvipsUtil = libvipsUtil ?? throw new ArgumentNullException(nameof(libvipsUtil));
@@ -68,11 +71,13 @@ public sealed class ImageOptimizerAvifWriteRunner : IImageOptimizerAvifWriteRunn
                     return Fail("AVIF widths must be positive integers up to 100000, or 'none'");
                 widths.Add(width);
             }
+
             if (widths.Count == 0)
                 return Fail("AVIF widths must contain at least one width, or 'none'");
         }
-        string manifestPath = GetFullPath(GetOptional(map, "--manifestPath") ?? Path.Combine(outputRoot ?? wwwRoot, "image-variants.json"), projectDirectory!);
-        string cachePath = GetFullPath(GetOptional(map, "--cachePath") ?? "obj/imageoptimizer-avif/cache.json", projectDirectory!);
+
+        string cachePath = GetFullPath(GetOptional(map, "--cachePath") ?? "obj/imageoptimizer-avif/cache.json",
+            projectDirectory!);
 
         if (!await _directoryUtil.Exists(wwwRoot, cancellationToken))
         {
@@ -89,18 +94,22 @@ public sealed class ImageOptimizerAvifWriteRunner : IImageOptimizerAvifWriteRunn
             StripMetadata = stripMetadata
         };
 
-        return await Optimize(wwwRoot, outputRoot, sourceExtensions, options, widths, manifestPath, cachePath, force, failOnError, warnOnSkippedWidths, cancellationToken);
+        return await Optimize(wwwRoot, outputRoot, sourceExtensions, options, widths, cachePath, force,
+            failOnError, warnOnSkippedWidths, cancellationToken);
     }
 
-    private async ValueTask<int> Optimize(string wwwRoot, string? outputRoot, IReadOnlyCollection<string> sourceExtensions,
-        AvifEncodeOptions options, SortedSet<int> widths, string manifestPath, string cachePath, bool force, bool failOnError, bool warnOnSkippedWidths,
+    private async ValueTask<int> Optimize(string wwwRoot, string? outputRoot,
+        IReadOnlyCollection<string> sourceExtensions, AvifEncodeOptions options, SortedSet<int> widths,
+        string cachePath, bool force, bool failOnError, bool warnOnSkippedWidths,
         CancellationToken cancellationToken)
     {
         string destinationRoot = outputRoot ?? wwwRoot;
-        var extensions = new HashSet<string>(sourceExtensions.Select(extension => "." + extension), StringComparer.OrdinalIgnoreCase);
-        string[] sources = (await _fileUtil.GetAllFileNamesInDirectoryRecursively(wwwRoot, log: false, cancellationToken))
-                           .Where(path => extensions.Contains(Path.GetExtension(path)))
-                           .OrderBy(path => path, StringComparer.OrdinalIgnoreCase).ToArray();
+        var extensions = new HashSet<string>(sourceExtensions.Select(extension => "." + extension),
+            StringComparer.OrdinalIgnoreCase);
+        string[] sources =
+            (await _fileUtil.GetAllFileNamesInDirectoryRecursively(wwwRoot, log: false, cancellationToken))
+            .Where(path => extensions.Contains(Path.GetExtension(path)))
+            .OrderBy(path => path, StringComparer.OrdinalIgnoreCase).ToArray();
 
         // Reserve every possible output before writing anything. A source such as
         // photo-480.png must never be overwritten by a variant of photo.png.
@@ -119,10 +128,9 @@ public sealed class ImageOptimizerAvifWriteRunner : IImageOptimizerAvifWriteRunn
 
         Dictionary<string, AvifImageCacheEntry> previous = await ReadCache(cachePath, cancellationToken);
         var cache = new Dictionary<string, AvifImageCacheEntry>(StringComparer.OrdinalIgnoreCase);
-        var manifest = new AvifImageManifest();
         int generated = 0, skipped = 0, failed = 0;
-        string settings = JsonSerializer.Serialize(options) + "|" + string.Join(",", widths) + "|" +
-                          destinationRoot + "|" + typeof(ImageOptimizerAvifWriteRunner).Assembly.GetName().Version;
+        string settings = JsonSerializer.Serialize(options) + "|" + string.Join(",", widths) + "|" + destinationRoot +
+                          "|" + typeof(ImageOptimizerAvifWriteRunner).Assembly.GetName().Version;
 
         foreach (string source in sources)
         {
@@ -130,17 +138,16 @@ public sealed class ImageOptimizerAvifWriteRunner : IImageOptimizerAvifWriteRunn
             try
             {
                 string fingerprint;
-                await using (FileStream stream = File.OpenRead(source))
-                    fingerprint = Convert.ToHexString(await SHA256.HashDataAsync(stream, cancellationToken)) + "|" + settings;
+                await using (FileStream stream = _fileUtil.OpenRead(source))
+                    fingerprint = Convert.ToHexString(await SHA256.HashDataAsync(stream, cancellationToken)) + "|" +
+                                  settings;
 
                 if (!force && previous.TryGetValue(source, out AvifImageCacheEntry? entry) &&
-                    entry.Fingerprint == fingerprint && entry.Variants.Count > 0 &&
-                    entry.Variants.All(variant => File.Exists(Path.Combine(destinationRoot, variant.Path))))
+                    entry.Fingerprint == fingerprint && entry.Variants.Count > 0 && await VariantsExist(destinationRoot, entry.Variants, cancellationToken))
                 {
                     if (warnOnSkippedWidths)
                         WarnSkippedWidths(source, entry.Variants.Max(variant => variant.Width), widths);
                     cache[source] = entry;
-                    manifest.Images[RelativePath(wwwRoot, source)] = entry.Variants;
                     skipped += entry.Variants.Count;
                     continue;
                 }
@@ -164,13 +171,15 @@ public sealed class ImageOptimizerAvifWriteRunner : IImageOptimizerAvifWriteRunn
                 foreach (int width in widths.Where(width => width < sourceWidth).Append(sourceWidth))
                 {
                     string path = width == sourceWidth ? output : VariantPath(output, width);
-                    AvifImageVariant variant = await EncodeVariant(source, path, destinationRoot, width, sourceHeight, width == sourceWidth, options, cancellationToken);
+                    AvifImageVariant variant = await EncodeVariant(source, path, destinationRoot, width, sourceHeight,
+                        width == sourceWidth, options, cancellationToken);
                     variants.Add(variant);
                     generated++;
-                    Console.WriteLine($"Optimized {RelativePath(wwwRoot, source)} -> {path} ({variant.Width}x{variant.Height})");
+                    Console.WriteLine(
+                        $"Optimized {RelativePath(wwwRoot, source)} -> {path} ({variant.Width}x{variant.Height})");
                 }
+
                 cache[source] = new AvifImageCacheEntry(fingerprint, variants);
-                manifest.Images[RelativePath(wwwRoot, source)] = variants;
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -185,37 +194,40 @@ public sealed class ImageOptimizerAvifWriteRunner : IImageOptimizerAvifWriteRunn
             }
         }
 
-        // Publish only complete source entries, never URLs for failed/missing variants.
-        await WriteJsonIfChanged(manifestPath, manifest, cancellationToken);
         await WriteJsonIfChanged(cachePath, cache, cancellationToken);
-        Console.WriteLine($"Soenneker.Gen.Razor.ImageOptimizer.Avif: {sources.Length} source(s), {generated} generated, {skipped} up-to-date, {failed} failed.");
+        Console.WriteLine(
+            $"Soenneker.Gen.Razor.ImageOptimizer.Avif: {sources.Length} source(s), {generated} generated, {skipped} up-to-date, {failed} failed.");
         return 0;
     }
 
-    private async ValueTask<AvifImageVariant> EncodeVariant(string source, string output, string outputRoot, int width, int sourceHeight, bool fullSize,
-        AvifEncodeOptions options, CancellationToken cancellationToken)
+    private async ValueTask<AvifImageVariant> EncodeVariant(string source, string output, string outputRoot, int width,
+        int sourceHeight, bool fullSize, AvifEncodeOptions options, CancellationToken cancellationToken)
     {
         // PNG is a lossless intermediate; libavif still handles the progressive AVIF encode.
         // Normalize EXIF orientation even for the full-size output, before stripping metadata.
-        string temporaryBase = Path.Combine(Path.GetDirectoryName(output)!, $".{Path.GetFileName(output)}.{Guid.NewGuid()}");
+        string temporaryBase =
+            Path.Combine(Path.GetDirectoryName(output)!, $".{Path.GetFileName(output)}.{Guid.NewGuid()}");
         string temporaryInput = temporaryBase + ".png";
         string temporaryOutput = temporaryBase + ".avif";
         try
         {
             if (fullSize)
             {
-                await _libvipsUtil.AutoRotate(source, temporaryInput, new PngOptions { StripMetadata = false }, cancellationToken);
+                await _libvipsUtil.AutoRotate(source, temporaryInput, new PngOptions { StripMetadata = false },
+                    cancellationToken);
             }
             else
             {
                 // An explicit height bound keeps portraits constrained by width instead of a square.
-                await _libvipsUtil.Resize(source, temporaryInput, width, sourceHeight, options: new PngOptions { StripMetadata = false },
-                    cancellationToken: cancellationToken);
+                await _libvipsUtil.Resize(source, temporaryInput, width, sourceHeight,
+                    options: new PngOptions { StripMetadata = false }, cancellationToken: cancellationToken);
             }
+
             await _libavifUtil.Encode(temporaryInput, temporaryOutput, options, cancellationToken);
             ImageInfo encoded = await _libvipsUtil.Identify(temporaryOutput, cancellationToken);
             if (encoded.Width != width || encoded.Height <= 0)
                 throw new InvalidDataException($"Expected width {width}, got {encoded.Width}x{encoded.Height}.");
+            // Require a native atomic rename; FileUtil.Move can fall back to copy-and-delete.
             File.Move(temporaryOutput, output, overwrite: true);
             return new AvifImageVariant(RelativePath(outputRoot, output), encoded.Width, encoded.Height);
         }
@@ -233,47 +245,68 @@ public sealed class ImageOptimizerAvifWriteRunner : IImageOptimizerAvifWriteRunn
             return;
 
         // MSBuild Exec recognizes this format as a warning, including on cached builds.
-        Console.WriteLine($"{source}: warning AVIF001: Source image is {sourceWidth}px wide; skipped requested width(s) {string.Join(", ", skippedWidths)}px to avoid upscaling. Use a larger source image or reduce ImageOptimizerAvifWidths.");
+        Console.WriteLine(
+            $"{source}: warning AVIF001: Source image is {sourceWidth}px wide; skipped requested width(s) {string.Join(", ", skippedWidths)}px to avoid upscaling. Use a larger source image or reduce ImageOptimizerAvifWidths.");
+    }
+
+    private async ValueTask<bool> VariantsExist(string root, IEnumerable<AvifImageVariant> variants, CancellationToken cancellationToken)
+    {
+        foreach (AvifImageVariant variant in variants)
+        {
+            if (!await _fileUtil.Exists(Path.Combine(root, variant.Path), cancellationToken))
+                return false;
+        }
+
+        return true;
     }
 
     private static string VariantPath(string output, int width) =>
         Path.Combine(Path.GetDirectoryName(output)!, $"{Path.GetFileNameWithoutExtension(output)}-{width}.avif");
 
-    private static string RelativePath(string root, string path) => Path.GetRelativePath(root, path).Replace(Path.DirectorySeparatorChar, '/');
+    private static string RelativePath(string root, string path) =>
+        Path.GetRelativePath(root, path).Replace(Path.DirectorySeparatorChar, '/');
 
-    private static async Task<Dictionary<string, AvifImageCacheEntry>> ReadCache(string path, CancellationToken cancellationToken)
+    private async Task<Dictionary<string, AvifImageCacheEntry>> ReadCache(string path,
+        CancellationToken cancellationToken)
     {
-        if (File.Exists(path))
+        if ((await _fileUtil.Exists(path)))
         {
             try
             {
                 var entries = JsonSerializer.Deserialize<Dictionary<string, AvifImageCacheEntry>>(
-                    await File.ReadAllTextAsync(path, cancellationToken), JsonOptions);
+                    await _fileUtil.Read(path, cancellationToken: cancellationToken), JsonOptions);
                 if (entries is not null)
                     return new Dictionary<string, AvifImageCacheEntry>(entries, StringComparer.OrdinalIgnoreCase);
             }
-            catch (JsonException) { /* Rebuild an obsolete or interrupted cache. */ }
+            catch (JsonException)
+            {
+                /* Rebuild an obsolete or interrupted cache. */
+            }
         }
+
         return new Dictionary<string, AvifImageCacheEntry>(StringComparer.OrdinalIgnoreCase);
     }
 
-    private static async Task WriteJsonIfChanged<T>(string path, T value, CancellationToken cancellationToken)
+    private async Task WriteJsonIfChanged<T>(string path, T value, CancellationToken cancellationToken)
     {
         string json = JsonSerializer.Serialize(value, JsonOptions);
-        if (File.Exists(path) && await File.ReadAllTextAsync(path, cancellationToken) == json)
+        if ((await _fileUtil.Exists(path)) && await _fileUtil.Read(path, cancellationToken: cancellationToken) == json)
             return;
         System.IO.Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         string temporary = path + "." + Guid.NewGuid() + ".tmp";
         try
         {
-            await File.WriteAllTextAsync(temporary, json, cancellationToken);
+            await _fileUtil.Write(temporary, json, cancellationToken: cancellationToken);
+            // Keep cache publication atomic; do not use a copy-and-delete move fallback.
             File.Move(temporary, path, overwrite: true);
         }
         finally
         {
-            if (File.Exists(temporary)) File.Delete(temporary);
+            if ((await _fileUtil.Exists(temporary)))
+                await _fileUtil.Delete(temporary);
         }
     }
+
     private static string GetOutputPath(string source, string wwwRoot, string? outputRoot)
     {
         string filename = Path.GetFileNameWithoutExtension(source) + ".avif";
@@ -284,7 +317,8 @@ public sealed class ImageOptimizerAvifWriteRunner : IImageOptimizerAvifWriteRunn
         return Path.Combine(outputRoot, relativeDirectory, filename);
     }
 
-    private static bool TryGetRequiredPath(IReadOnlyDictionary<string, string> map, string key, string? basePath, out string? path)
+    private static bool TryGetRequiredPath(IReadOnlyDictionary<string, string> map, string key, string? basePath,
+        out string? path)
     {
         path = GetOptional(map, key);
         if (path is null)
@@ -294,11 +328,14 @@ public sealed class ImageOptimizerAvifWriteRunner : IImageOptimizerAvifWriteRunn
     }
 
     private static string GetFullPath(string path, string basePath) =>
-        Path.IsPathRooted(path.Trim().Trim('"')) ? Path.GetFullPath(path.Trim().Trim('"')) :
-            Path.GetFullPath(Path.Combine(basePath, path.Trim().Trim('"')));
+        Path.IsPathRooted(path.Trim().Trim('"'))
+            ? Path.GetFullPath(path.Trim().Trim('"'))
+            : Path.GetFullPath(Path.Combine(basePath, path.Trim().Trim('"')));
 
     private static string[] ParseList(string value) => value.Split([';', ','],
-        StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+                                                                StringSplitOptions.RemoveEmptyEntries |
+                                                                StringSplitOptions.TrimEntries)
+                                                            .Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
 
     private static bool TryParseInt(string? value, int defaultValue, int minimum, int maximum, out int result)
     {
@@ -308,8 +345,12 @@ public sealed class ImageOptimizerAvifWriteRunner : IImageOptimizerAvifWriteRunn
         return result >= minimum && result <= maximum;
     }
 
-    private static bool ParseBoolean(string? value, bool defaultValue) => string.IsNullOrWhiteSpace(value) ? defaultValue :
-        bool.TryParse(value.Trim().Trim('"'), out bool result) ? result : defaultValue;
+    private static bool ParseBoolean(string? value, bool defaultValue) => string.IsNullOrWhiteSpace(value)
+        ?
+        defaultValue
+        : bool.TryParse(value.Trim().Trim('"'), out bool result)
+            ? result
+            : defaultValue;
 
     private static string? GetOptional(IReadOnlyDictionary<string, string> map, string key) =>
         map.TryGetValue(key, out string? value) && !string.IsNullOrWhiteSpace(value) ? value.Trim().Trim('"') : null;
@@ -322,6 +363,7 @@ public sealed class ImageOptimizerAvifWriteRunner : IImageOptimizerAvifWriteRunn
             if (args[index].StartsWith("--", StringComparison.Ordinal) && index + 1 < args.Length)
                 map[args[index]] = args[++index];
         }
+
         return map;
     }
 
