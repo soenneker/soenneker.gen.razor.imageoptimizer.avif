@@ -9,16 +9,13 @@
 
     <ItemGroup>
         <PackageReference Include="AwesomeAssertions" Version="9.6.0" />
-        <PackageReference Include="Soenneker.Tests.Unit" Version="4.0.1347" />
+        <PackageReference Include="Soenneker.Tests.Unit" Version="4.0.1348" />
         <PackageReference Include="TUnit" Version="1.69.16" />
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference
-            Include="..\..\src\Soenneker.Gen.Razor.ImageOptimizer.Avif.BuildTasks\Soenneker.Gen.Razor.ImageOptimizer.Avif.BuildTasks.csproj" />
-        <ProjectReference
-            Include="..\..\src\Soenneker.Gen.Razor.ImageOptimizer.Avif\Soenneker.Gen.Razor.ImageOptimizer.Avif.csproj"
-            ReferenceOutputAssembly="false" OutputItemType="Analyzer" />
+        <ProjectReference Include="..\..\src\Soenneker.Gen.Razor.ImageOptimizer.Avif.BuildTasks\Soenneker.Gen.Razor.ImageOptimizer.Avif.BuildTasks.csproj" />
+        <ProjectReference Include="..\..\src\Soenneker.Gen.Razor.ImageOptimizer.Avif\Soenneker.Gen.Razor.ImageOptimizer.Avif.csproj" ReferenceOutputAssembly="false" OutputItemType="Analyzer" />
     </ItemGroup>
 
 </Project>
