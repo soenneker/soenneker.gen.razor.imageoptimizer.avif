@@ -129,7 +129,7 @@ public sealed class ImageOptimizerAvifWriteRunner : IImageOptimizerAvifWriteRunn
         Dictionary<string, AvifImageCacheEntry> previous = await ReadCache(cachePath, cancellationToken);
         var cache = new Dictionary<string, AvifImageCacheEntry>(StringComparer.OrdinalIgnoreCase);
         int generated = 0, skipped = 0, failed = 0;
-        string settings = JsonSerializer.Serialize(options) + "|" + string.Join(",", widths) + "|" + destinationRoot +
+        string settings = JsonSerializer.Serialize(options, AotJsonContext.Get<AvifEncodeOptions>()) + "|" + string.Join(",", widths) + "|" + destinationRoot +
                           "|" + typeof(ImageOptimizerAvifWriteRunner).Assembly.GetName().Version;
 
         foreach (string source in sources)
@@ -273,8 +273,7 @@ public sealed class ImageOptimizerAvifWriteRunner : IImageOptimizerAvifWriteRunn
         {
             try
             {
-                var entries = JsonSerializer.Deserialize<Dictionary<string, AvifImageCacheEntry>>(
-                    await _fileUtil.Read(path, cancellationToken: cancellationToken), JsonOptions);
+                var entries = JsonSerializer.Deserialize(await _fileUtil.Read(path, cancellationToken: cancellationToken), AotJsonContext.Get<Dictionary<string, AvifImageCacheEntry>>(JsonOptions));
                 if (entries is not null)
                     return new Dictionary<string, AvifImageCacheEntry>(entries, StringComparer.OrdinalIgnoreCase);
             }
@@ -289,7 +288,7 @@ public sealed class ImageOptimizerAvifWriteRunner : IImageOptimizerAvifWriteRunn
 
     private async Task WriteJsonIfChanged<T>(string path, T value, CancellationToken cancellationToken)
     {
-        string json = JsonSerializer.Serialize(value, JsonOptions);
+        string json = JsonSerializer.Serialize(value, AotJsonContext.Get<T>(JsonOptions));
         if ((await _fileUtil.Exists(path)) && await _fileUtil.Read(path, cancellationToken: cancellationToken) == json)
             return;
         System.IO.Directory.CreateDirectory(Path.GetDirectoryName(path)!);
