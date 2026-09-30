@@ -15,7 +15,7 @@ namespace Soenneker.Gen.Razor.ImageOptimizer.Avif.Tests;
 public sealed class ImageOptimizerAvifTests
 {
     [Test]
-    public async Task Generates_real_variants_and_reuses_only_matching_inputs()
+    public async ValueTask Generates_real_variants_and_reuses_only_matching_inputs()
     {
         var services = new ServiceCollection();
         services.AddLogging();
@@ -76,7 +76,7 @@ public sealed class ImageOptimizerAvifTests
     [Arguments(32, 16)]
     [Arguments(32, 64)]
     [Arguments(480, 960)]
-    public async Task Small_images_and_separate_output_roots_generate_only_images(int width, int height)
+    public async ValueTask Small_images_and_separate_output_roots_generate_only_images(int width, int height)
     {
         var services = new ServiceCollection();
         services.AddLogging();
@@ -106,7 +106,7 @@ public sealed class ImageOptimizerAvifTests
     }
 
     [Test]
-    public async Task Portrait_variants_use_requested_width_and_preserve_aspect_ratio()
+    public async ValueTask Portrait_variants_use_requested_width_and_preserve_aspect_ratio()
     {
         var services = new ServiceCollection();
         services.AddLogging();
@@ -132,7 +132,7 @@ public sealed class ImageOptimizerAvifTests
     }
 
     [Test]
-    public async Task Invalid_widths_and_output_collisions_fail_before_writing()
+    public async ValueTask Invalid_widths_and_output_collisions_fail_before_writing()
     {
         var services = new ServiceCollection();
         services.AddLogging();
