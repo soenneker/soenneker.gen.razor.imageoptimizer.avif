@@ -21,7 +21,7 @@
         <AssemblyName>Soenneker.Gen.Razor.ImageOptimizer.Avif</AssemblyName>
         <PackageId>Soenneker.Gen.Razor.ImageOptimizer.Avif</PackageId>
         <PackageTags>gen razor imageoptimizer avif generator image optimizer progressive libavif externalgenerator imageoptimizeravif</PackageTags>
-        <Copyright>Copyright © 2026 Jake Soenneker</Copyright>
+        <Copyright>Copyright Ã‚Â© 2026 Jake Soenneker</Copyright>
         <Authors>Jake Soenneker</Authors>
         <Company>https://soenneker.com</Company>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
@@ -60,18 +60,34 @@
     <ItemGroup>
         <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.9.0" PrivateAssets="all" />
     </ItemGroup>
+    <PropertyGroup>
+        <ImageOptimizerAvifNativeRuntimeIdentifier Condition="'$(ImageOptimizerAvifNativeRuntimeIdentifier)' == ''">$(NETCoreSdkRuntimeIdentifier)</ImageOptimizerAvifNativeRuntimeIdentifier>
+        <ImageOptimizerAvifNativeArtifactsDir Condition="'$(ImageOptimizerAvifNativeArtifactsDir)' == ''">$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)/../../artifacts/native'))</ImageOptimizerAvifNativeArtifactsDir>
+        <_ImageOptimizerAvifNativeExecutable>Soenneker.Gen.Razor.ImageOptimizer.Avif.BuildTasks</_ImageOptimizerAvifNativeExecutable>
+        <_ImageOptimizerAvifNativeExecutable Condition="$([System.String]::Copy('$(ImageOptimizerAvifNativeRuntimeIdentifier)').StartsWith('win-'))">$(_ImageOptimizerAvifNativeExecutable).exe</_ImageOptimizerAvifNativeExecutable>
+    </PropertyGroup>
 
-    <Target Name="BuildBuildTasksTool" BeforeTargets="Pack" Condition="'$(IsPackable)' == 'true'">
-
-        <MSBuild Projects="..\Soenneker.Gen.Razor.ImageOptimizer.Avif.BuildTasks\Soenneker.Gen.Razor.ImageOptimizer.Avif.BuildTasks.csproj" Targets="Build" Properties="Configuration=$(Configuration);NoBuild=false" RemoveProperties="TargetFramework;TargetFrameworks" BuildInParallel="true" />
-
-        <Error Condition="!Exists('..\Soenneker.Gen.Razor.ImageOptimizer.Avif.BuildTasks\bin\$(Configuration)\Soenneker.Gen.Razor.ImageOptimizer.Avif.BuildTasks.dll')" Text="BuildTasks output missing. Aborting pack to avoid publishing a broken package." />
+    <Target Name="BuildBuildTasksTool" BeforeTargets="Build"
+            Condition="'$(ImageOptimizerAvifUsePrebuiltNativeTools)' != 'true'"
+            Inputs="@(ImageOptimizerAvifNativeSource);../Soenneker.Gen.Razor.ImageOptimizer.Avif.BuildTasks/obj/project.assets.json"
+            Outputs="$(ImageOptimizerAvifNativeArtifactsDir)/$(ImageOptimizerAvifNativeRuntimeIdentifier)/$(_ImageOptimizerAvifNativeExecutable)">
+        <Exec Command="dotnet publish &quot;$(MSBuildProjectDirectory)/../Soenneker.Gen.Razor.ImageOptimizer.Avif.BuildTasks/Soenneker.Gen.Razor.ImageOptimizer.Avif.BuildTasks.csproj&quot; --configuration Release --runtime $(ImageOptimizerAvifNativeRuntimeIdentifier) --output &quot;$(ImageOptimizerAvifNativeArtifactsDir)/$(ImageOptimizerAvifNativeRuntimeIdentifier)&quot;" />
     </Target>
+
+    <ItemGroup>
+        <ImageOptimizerAvifNativeSource Include="../Soenneker.Gen.Razor.ImageOptimizer.Avif.BuildTasks/**/*.cs;../Soenneker.Gen.Razor.ImageOptimizer.Avif.BuildTasks/*.csproj"
+                             Exclude="../Soenneker.Gen.Razor.ImageOptimizer.Avif.BuildTasks/bin/**;../Soenneker.Gen.Razor.ImageOptimizer.Avif.BuildTasks/obj/**" />
+    </ItemGroup>
 
     <Target Name="AddBuildTasksOutputToPackage" DependsOnTargets="BuildBuildTasksTool">
         <ItemGroup>
-            <TfmSpecificPackageFile Include="..\Soenneker.Gen.Razor.ImageOptimizer.Avif.BuildTasks\bin\$(Configuration)\**\*.*"
-                                    PackagePath="buildTransitive/%(RecursiveDir)" />
+            <_ImageOptimizerAvifRequiredRuntime Include="win-x64;linux-x64" Condition="'$(ImageOptimizerAvifUsePrebuiltNativeTools)' == 'true'" />
+            <_ImageOptimizerAvifNativeFile Include="$(ImageOptimizerAvifNativeArtifactsDir)/**/*"
+                                Exclude="$(ImageOptimizerAvifNativeArtifactsDir)/win-x64/Resources/linux-x64/**;$(ImageOptimizerAvifNativeArtifactsDir)/linux-x64/Resources/win-x64/**;$(ImageOptimizerAvifNativeArtifactsDir)/**/*.pdb;$(ImageOptimizerAvifNativeArtifactsDir)/**/*.dbg;$(ImageOptimizerAvifNativeArtifactsDir)/**/*.dSYM/**" />
+            <TfmSpecificPackageFile Include="@(_ImageOptimizerAvifNativeFile)" PackagePath="tools/native/" />
         </ItemGroup>
+        <Error Condition="'@(_ImageOptimizerAvifRequiredRuntime)' != '' and !Exists('$(ImageOptimizerAvifNativeArtifactsDir)/%(_ImageOptimizerAvifRequiredRuntime.Identity)/Soenneker.Gen.Razor.ImageOptimizer.Avif.BuildTasks') and !Exists('$(ImageOptimizerAvifNativeArtifactsDir)/%(_ImageOptimizerAvifRequiredRuntime.Identity)/Soenneker.Gen.Razor.ImageOptimizer.Avif.BuildTasks.exe')"
+               Text="Missing native imageoptimizer.avif tool for %(_ImageOptimizerAvifRequiredRuntime.Identity)." />
+        <Error Condition="'@(_ImageOptimizerAvifNativeFile)' == ''" Text="Native imageoptimizer.avif tools are missing. Publish BuildTasks before packing." />
     </Target>
 </Project>

@@ -1,13 +1,16 @@
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 
     <PropertyGroup>
+        <!-- Select the SDK host rather than the application's RuntimeIdentifier (for example browser-wasm). -->
+        <ImageOptimizerAvifToolRuntimeIdentifier Condition="'$(ImageOptimizerAvifToolRuntimeIdentifier)' == ''">$(NETCoreSdkRuntimeIdentifier)</ImageOptimizerAvifToolRuntimeIdentifier>
+        <_ImageOptimizerAvifExecutableName>Soenneker.Gen.Razor.ImageOptimizer.Avif.BuildTasks</_ImageOptimizerAvifExecutableName>
+        <_ImageOptimizerAvifExecutableName Condition="$([System.String]::Copy('$(ImageOptimizerAvifToolRuntimeIdentifier)').StartsWith('win-'))">$(_ImageOptimizerAvifExecutableName).exe</_ImageOptimizerAvifExecutableName>
+        <_ImageOptimizerAvifNativePackagePath>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../tools/native/$(ImageOptimizerAvifToolRuntimeIdentifier)/$(_ImageOptimizerAvifExecutableName)'))</_ImageOptimizerAvifNativePackagePath>
+        <_ImageOptimizerAvifNativeProjectPath>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../../artifacts/native/$(ImageOptimizerAvifToolRuntimeIdentifier)/$(_ImageOptimizerAvifExecutableName)'))</_ImageOptimizerAvifNativeProjectPath>
+        <ImageOptimizerAvifBuildTasksExecutablePath Condition="'$(ImageOptimizerAvifBuildTasksExecutablePath)' == '' and Exists('$(_ImageOptimizerAvifNativePackagePath)')">$(_ImageOptimizerAvifNativePackagePath)</ImageOptimizerAvifBuildTasksExecutablePath>
+        <ImageOptimizerAvifBuildTasksExecutablePath Condition="'$(ImageOptimizerAvifBuildTasksExecutablePath)' == ''">$(_ImageOptimizerAvifNativeProjectPath)</ImageOptimizerAvifBuildTasksExecutablePath>
+
         <_ImageOptimizerAvifTargetsPath>$(MSBuildThisFileFullPath)</_ImageOptimizerAvifTargetsPath>
-        <_ImageOptimizerAvifBuildTasksDllFromPackage>$([System.IO.Path]::Combine('$(MSBuildThisFileDirectory)', 'Soenneker.Gen.Razor.ImageOptimizer.Avif.BuildTasks.dll'))</_ImageOptimizerAvifBuildTasksDllFromPackage>
-        <_ImageOptimizerAvifBuildTasksDllFromBuildTransitive>$([System.IO.Path]::GetFullPath($([System.IO.Path]::Combine('$(MSBuildThisFileDirectory)', '..', 'buildTransitive', 'Soenneker.Gen.Razor.ImageOptimizer.Avif.BuildTasks.dll'))))</_ImageOptimizerAvifBuildTasksDllFromBuildTransitive>
-        <_ImageOptimizerAvifBuildTasksDllFromProject>$([System.IO.Path]::GetFullPath($([System.IO.Path]::Combine('$(MSBuildThisFileDirectory)', '..', 'Soenneker.Gen.Razor.ImageOptimizer.Avif.BuildTasks', 'bin', '$(Configuration)', 'Soenneker.Gen.Razor.ImageOptimizer.Avif.BuildTasks.dll'))))</_ImageOptimizerAvifBuildTasksDllFromProject>
-        <ImageOptimizerAvifBuildTasksDllPath Condition="'$(ImageOptimizerAvifBuildTasksDllPath)'=='' and Exists('$(_ImageOptimizerAvifBuildTasksDllFromPackage)')">$(_ImageOptimizerAvifBuildTasksDllFromPackage)</ImageOptimizerAvifBuildTasksDllPath>
-        <ImageOptimizerAvifBuildTasksDllPath Condition="'$(ImageOptimizerAvifBuildTasksDllPath)'=='' and Exists('$(_ImageOptimizerAvifBuildTasksDllFromBuildTransitive)')">$(_ImageOptimizerAvifBuildTasksDllFromBuildTransitive)</ImageOptimizerAvifBuildTasksDllPath>
-        <ImageOptimizerAvifBuildTasksDllPath Condition="'$(ImageOptimizerAvifBuildTasksDllPath)'=='' and Exists('$(_ImageOptimizerAvifBuildTasksDllFromProject)')">$(_ImageOptimizerAvifBuildTasksDllFromProject)</ImageOptimizerAvifBuildTasksDllPath>
 
         <ImageOptimizerAvifEnabled Condition="'$(ImageOptimizerAvifEnabled)'==''">true</ImageOptimizerAvifEnabled>
         <ImageOptimizerAvifWwwRootPath Condition="'$(ImageOptimizerAvifWwwRootPath)'==''">$(ProjectDir)wwwroot</ImageOptimizerAvifWwwRootPath>
@@ -44,7 +47,7 @@
             <_ImageOptimizerAvifTrackedFiles Include="$(ImageOptimizerAvifWwwRootPath)/**/*" Exclude="$(_ImageOptimizerAvifInputManifest);$(_ImageOptimizerAvifSuccessStamp)" />
             <_ImageOptimizerAvifTrackedFiles Include="$(ImageOptimizerAvifOutputPath)/**/*" Exclude="$(_ImageOptimizerAvifInputManifest);$(_ImageOptimizerAvifSuccessStamp)" Condition="'$(ImageOptimizerAvifOutputPath)'!=''" />
             <_ImageOptimizerAvifTrackedFiles Include="$(ImageOptimizerAvifCachePath)" Condition="'$(ImageOptimizerAvifCachePath)'!='' and Exists('$(ImageOptimizerAvifCachePath)')" />
-            <_ImageOptimizerAvifTrackedFiles Include="$(_ImageOptimizerAvifTargetsPath);$(MSBuildProjectFullPath);$(MSBuildAllProjects);$(ProjectAssetsFile);$(ImageOptimizerAvifBuildTasksDllPath)" />
+            <_ImageOptimizerAvifTrackedFiles Include="$(_ImageOptimizerAvifTargetsPath);$(MSBuildProjectFullPath);$(MSBuildAllProjects);$(ProjectAssetsFile);$(ImageOptimizerAvifBuildTasksExecutablePath)" />
         </ItemGroup>
         <ItemGroup>
             <_ImageOptimizerAvifHashInputs Remove="@(_ImageOptimizerAvifHashInputs)" />
@@ -58,7 +61,7 @@
             <Output TaskParameter="Items" ItemName="_ImageOptimizerAvifHashedInputs" />
         </GetFileHash>
         <WriteLinesToFile File="$(_ImageOptimizerAvifInputManifest)"
-                          Lines="@(_ImageOptimizerAvifHashedInputs->'%(FullPath)|%(FileHash)');@(_ImageOptimizerAvifTrackedFiles->'%(FullPath)|%(ModifiedTime)');ImageOptimizerAvifOutputPath=$(ImageOptimizerAvifOutputPath);ImageOptimizerAvifBuildTasksDllPath=$(ImageOptimizerAvifBuildTasksDllPath);ImageOptimizerAvifCachePath=$(ImageOptimizerAvifCachePath);ImageOptimizerAvifEnabled=$(ImageOptimizerAvifEnabled);ImageOptimizerAvifFailOnError=$(ImageOptimizerAvifFailOnError);ImageOptimizerAvifForce=$(ImageOptimizerAvifForce);ImageOptimizerAvifLossless=$(ImageOptimizerAvifLossless);ImageOptimizerAvifProgressive=$(ImageOptimizerAvifProgressive);ImageOptimizerAvifQuality=$(ImageOptimizerAvifQuality);ImageOptimizerAvifSourceExtensions=$(ImageOptimizerAvifSourceExtensions);ImageOptimizerAvifSpeed=$(ImageOptimizerAvifSpeed);ImageOptimizerAvifStripMetadata=$(ImageOptimizerAvifStripMetadata);ImageOptimizerAvifWarnOnSkippedWidths=$(ImageOptimizerAvifWarnOnSkippedWidths);ImageOptimizerAvifWidths=$(ImageOptimizerAvifWidths);ImageOptimizerAvifWwwRootPath=$(ImageOptimizerAvifWwwRootPath)"
+                          Lines="@(_ImageOptimizerAvifHashedInputs->'%(FullPath)|%(FileHash)');@(_ImageOptimizerAvifTrackedFiles->'%(FullPath)|%(ModifiedTime)');ImageOptimizerAvifOutputPath=$(ImageOptimizerAvifOutputPath);ImageOptimizerAvifBuildTasksExecutablePath=$(ImageOptimizerAvifBuildTasksExecutablePath);ImageOptimizerAvifCachePath=$(ImageOptimizerAvifCachePath);ImageOptimizerAvifEnabled=$(ImageOptimizerAvifEnabled);ImageOptimizerAvifFailOnError=$(ImageOptimizerAvifFailOnError);ImageOptimizerAvifForce=$(ImageOptimizerAvifForce);ImageOptimizerAvifLossless=$(ImageOptimizerAvifLossless);ImageOptimizerAvifProgressive=$(ImageOptimizerAvifProgressive);ImageOptimizerAvifQuality=$(ImageOptimizerAvifQuality);ImageOptimizerAvifSourceExtensions=$(ImageOptimizerAvifSourceExtensions);ImageOptimizerAvifSpeed=$(ImageOptimizerAvifSpeed);ImageOptimizerAvifStripMetadata=$(ImageOptimizerAvifStripMetadata);ImageOptimizerAvifWarnOnSkippedWidths=$(ImageOptimizerAvifWarnOnSkippedWidths);ImageOptimizerAvifWidths=$(ImageOptimizerAvifWidths);ImageOptimizerAvifWwwRootPath=$(ImageOptimizerAvifWwwRootPath)"
                           Overwrite="true" WriteOnlyWhenDifferent="true" />
         <Delete Files="$(_ImageOptimizerAvifSuccessStamp)" Condition="'$(ImageOptimizerAvifForce)'=='true' or '$(ImageOptimizerAvifFailOnError)'!='true'" />
     </Target>
@@ -71,21 +74,23 @@
             Condition="'$(DesignTimeBuild)'!='true' and '$(IsCrossTargetingBuild)'!='true' and '$(ImageOptimizerAvifEnabled)'=='true'">
 
         <Message Importance="high" Text="Running Soenneker.Gen.Razor.ImageOptimizer.Avif: wwwroot=$(ImageOptimizerAvifWwwRootPath) progressive=$(ImageOptimizerAvifProgressive)" />
-        <Error Condition="'$(ImageOptimizerAvifBuildTasksDllPath)'==''" Text="ImageOptimizerAvifBuildTasksDllPath was not resolved." />
-        <Error Condition="!Exists('$(ImageOptimizerAvifBuildTasksDllPath)')" Text="AVIF image optimizer BuildTasks DLL not found at '$(ImageOptimizerAvifBuildTasksDllPath)'." />
+        <Error Condition="'$(ImageOptimizerAvifBuildTasksExecutablePath)'==''" Text="ImageOptimizerAvifBuildTasksExecutablePath was not resolved." />
+        <Error Condition="!Exists('$(ImageOptimizerAvifBuildTasksExecutablePath)')" Text="AVIF image optimizer native BuildTasks executable not found at '$(ImageOptimizerAvifBuildTasksExecutablePath)'." />
 
+        <!-- NuGet extraction does not preserve Unix execute permissions. -->
+        <Exec Condition="'$(OS)' != 'Windows_NT'" Command="chmod +x &quot;$(ImageOptimizerAvifBuildTasksExecutablePath)&quot;" />
         <Exec WorkingDirectory="$(_ImageOptimizerAvifProjectDir)"
               IgnoreExitCode="false"
               ConsoleToMSBuild="true"
               StandardOutputImportance="high"
               StandardErrorImportance="high"
-              Command='dotnet exec &quot;$(ImageOptimizerAvifBuildTasksDllPath)&quot; --projectDir &quot;$(_ImageOptimizerAvifProjectDir)&quot; --wwwRoot &quot;$(ImageOptimizerAvifWwwRootPath)&quot; --sourceExtensions &quot;$(ImageOptimizerAvifSourceExtensions)&quot; --quality &quot;$(ImageOptimizerAvifQuality)&quot; --speed &quot;$(ImageOptimizerAvifSpeed)&quot; --lossless &quot;$(ImageOptimizerAvifLossless)&quot; --progressive &quot;$(ImageOptimizerAvifProgressive)&quot; --stripMetadata &quot;$(ImageOptimizerAvifStripMetadata)&quot; --warnOnSkippedWidths &quot;$(ImageOptimizerAvifWarnOnSkippedWidths)&quot; --widths &quot;$(ImageOptimizerAvifWidths)&quot; --cachePath &quot;$(ImageOptimizerAvifCachePath)&quot; --force &quot;$(ImageOptimizerAvifForce)&quot; --failOnError &quot;$(ImageOptimizerAvifFailOnError)&quot;$(_ImageOptimizerAvifOutputPathArg)' />
+              Command='&quot;$(ImageOptimizerAvifBuildTasksExecutablePath)&quot; --projectDir &quot;$(_ImageOptimizerAvifProjectDir)&quot; --wwwRoot &quot;$(ImageOptimizerAvifWwwRootPath)&quot; --sourceExtensions &quot;$(ImageOptimizerAvifSourceExtensions)&quot; --quality &quot;$(ImageOptimizerAvifQuality)&quot; --speed &quot;$(ImageOptimizerAvifSpeed)&quot; --lossless &quot;$(ImageOptimizerAvifLossless)&quot; --progressive &quot;$(ImageOptimizerAvifProgressive)&quot; --stripMetadata &quot;$(ImageOptimizerAvifStripMetadata)&quot; --warnOnSkippedWidths &quot;$(ImageOptimizerAvifWarnOnSkippedWidths)&quot; --widths &quot;$(ImageOptimizerAvifWidths)&quot; --cachePath &quot;$(ImageOptimizerAvifCachePath)&quot; --force &quot;$(ImageOptimizerAvifForce)&quot; --failOnError &quot;$(ImageOptimizerAvifFailOnError)&quot;$(_ImageOptimizerAvifOutputPathArg)' />
         <ItemGroup>
             <_ImageOptimizerAvifTrackedFiles Remove="@(_ImageOptimizerAvifTrackedFiles)" />
             <_ImageOptimizerAvifTrackedFiles Include="$(ImageOptimizerAvifWwwRootPath)/**/*" Exclude="$(_ImageOptimizerAvifInputManifest);$(_ImageOptimizerAvifSuccessStamp)" />
             <_ImageOptimizerAvifTrackedFiles Include="$(ImageOptimizerAvifOutputPath)/**/*" Exclude="$(_ImageOptimizerAvifInputManifest);$(_ImageOptimizerAvifSuccessStamp)" Condition="'$(ImageOptimizerAvifOutputPath)'!=''" />
             <_ImageOptimizerAvifTrackedFiles Include="$(ImageOptimizerAvifCachePath)" Condition="'$(ImageOptimizerAvifCachePath)'!='' and Exists('$(ImageOptimizerAvifCachePath)')" />
-            <_ImageOptimizerAvifTrackedFiles Include="$(_ImageOptimizerAvifTargetsPath);$(MSBuildProjectFullPath);$(MSBuildAllProjects);$(ProjectAssetsFile);$(ImageOptimizerAvifBuildTasksDllPath)" />
+            <_ImageOptimizerAvifTrackedFiles Include="$(_ImageOptimizerAvifTargetsPath);$(MSBuildProjectFullPath);$(MSBuildAllProjects);$(ProjectAssetsFile);$(ImageOptimizerAvifBuildTasksExecutablePath)" />
         </ItemGroup>
         <ItemGroup>
             <_ImageOptimizerAvifHashInputs Remove="@(_ImageOptimizerAvifHashInputs)" />
@@ -99,7 +104,7 @@
             <Output TaskParameter="Items" ItemName="_ImageOptimizerAvifHashedInputs" />
         </GetFileHash>
         <WriteLinesToFile File="$(_ImageOptimizerAvifInputManifest)"
-                          Lines="@(_ImageOptimizerAvifHashedInputs->'%(FullPath)|%(FileHash)');@(_ImageOptimizerAvifTrackedFiles->'%(FullPath)|%(ModifiedTime)');ImageOptimizerAvifOutputPath=$(ImageOptimizerAvifOutputPath);ImageOptimizerAvifBuildTasksDllPath=$(ImageOptimizerAvifBuildTasksDllPath);ImageOptimizerAvifCachePath=$(ImageOptimizerAvifCachePath);ImageOptimizerAvifEnabled=$(ImageOptimizerAvifEnabled);ImageOptimizerAvifFailOnError=$(ImageOptimizerAvifFailOnError);ImageOptimizerAvifForce=$(ImageOptimizerAvifForce);ImageOptimizerAvifLossless=$(ImageOptimizerAvifLossless);ImageOptimizerAvifProgressive=$(ImageOptimizerAvifProgressive);ImageOptimizerAvifQuality=$(ImageOptimizerAvifQuality);ImageOptimizerAvifSourceExtensions=$(ImageOptimizerAvifSourceExtensions);ImageOptimizerAvifSpeed=$(ImageOptimizerAvifSpeed);ImageOptimizerAvifStripMetadata=$(ImageOptimizerAvifStripMetadata);ImageOptimizerAvifWarnOnSkippedWidths=$(ImageOptimizerAvifWarnOnSkippedWidths);ImageOptimizerAvifWidths=$(ImageOptimizerAvifWidths);ImageOptimizerAvifWwwRootPath=$(ImageOptimizerAvifWwwRootPath)"
+                          Lines="@(_ImageOptimizerAvifHashedInputs->'%(FullPath)|%(FileHash)');@(_ImageOptimizerAvifTrackedFiles->'%(FullPath)|%(ModifiedTime)');ImageOptimizerAvifOutputPath=$(ImageOptimizerAvifOutputPath);ImageOptimizerAvifBuildTasksExecutablePath=$(ImageOptimizerAvifBuildTasksExecutablePath);ImageOptimizerAvifCachePath=$(ImageOptimizerAvifCachePath);ImageOptimizerAvifEnabled=$(ImageOptimizerAvifEnabled);ImageOptimizerAvifFailOnError=$(ImageOptimizerAvifFailOnError);ImageOptimizerAvifForce=$(ImageOptimizerAvifForce);ImageOptimizerAvifLossless=$(ImageOptimizerAvifLossless);ImageOptimizerAvifProgressive=$(ImageOptimizerAvifProgressive);ImageOptimizerAvifQuality=$(ImageOptimizerAvifQuality);ImageOptimizerAvifSourceExtensions=$(ImageOptimizerAvifSourceExtensions);ImageOptimizerAvifSpeed=$(ImageOptimizerAvifSpeed);ImageOptimizerAvifStripMetadata=$(ImageOptimizerAvifStripMetadata);ImageOptimizerAvifWarnOnSkippedWidths=$(ImageOptimizerAvifWarnOnSkippedWidths);ImageOptimizerAvifWidths=$(ImageOptimizerAvifWidths);ImageOptimizerAvifWwwRootPath=$(ImageOptimizerAvifWwwRootPath)"
                           Overwrite="true" WriteOnlyWhenDifferent="true" />
         <Touch Files="$(_ImageOptimizerAvifSuccessStamp)" AlwaysCreate="true" />
     </Target>
