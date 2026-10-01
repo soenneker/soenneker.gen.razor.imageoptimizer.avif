@@ -21,7 +21,7 @@
         <AssemblyName>Soenneker.Gen.Razor.ImageOptimizer.Avif</AssemblyName>
         <PackageId>Soenneker.Gen.Razor.ImageOptimizer.Avif</PackageId>
         <PackageTags>gen razor imageoptimizer avif generator image optimizer progressive libavif externalgenerator imageoptimizeravif</PackageTags>
-        <Copyright>Copyright Ã‚Â© 2026 Jake Soenneker</Copyright>
+        <Copyright>Copyright © 2026 Jake Soenneker</Copyright>
         <Authors>Jake Soenneker</Authors>
         <Company>https://soenneker.com</Company>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
