@@ -18,6 +18,6 @@
         <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.12" />
         <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.12" />
         <PackageReference Include="Soenneker.Libavif.Util" Version="4.0.84" />
-        <PackageReference Include="Soenneker.Libvips.Util" Version="4.0.119" />
+        <PackageReference Include="Soenneker.Libvips.Util" Version="4.0.120" />
     </ItemGroup>
 </Project>
