@@ -9,7 +9,7 @@
 
     <ItemGroup>
         <PackageReference Include="AwesomeAssertions" Version="9.6.0" />
-        <PackageReference Include="Soenneker.Tests.Unit" Version="4.0.1391" />
+        <PackageReference Include="Soenneker.Tests.Unit" Version="4.0.1392" />
         <PackageReference Include="TUnit" Version="1.75.0" />
     </ItemGroup>
 
