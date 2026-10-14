@@ -59,7 +59,8 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.9.0" PrivateAssets="all" />
+        <!-- Keep the compile-time API compatible with SDK 10.0.1xx; the compiler supplies Roslyn at runtime. -->
+        <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.0.0" PrivateAssets="all" />
     </ItemGroup>
     <PropertyGroup>
         <ImageOptimizerAvifNativeRuntimeIdentifier Condition="'$(ImageOptimizerAvifNativeRuntimeIdentifier)' == ''">$(NETCoreSdkRuntimeIdentifier)</ImageOptimizerAvifNativeRuntimeIdentifier>
@@ -72,7 +73,7 @@
             Condition="'$(ImageOptimizerAvifUsePrebuiltNativeTools)' != 'true'"
             Inputs="@(ImageOptimizerAvifNativeSource);../Soenneker.Gen.Razor.ImageOptimizer.Avif.BuildTasks/obj/project.assets.json"
             Outputs="$(ImageOptimizerAvifNativeArtifactsDir)/$(ImageOptimizerAvifNativeRuntimeIdentifier)/$(_ImageOptimizerAvifNativeExecutable)">
-        <Exec Command="dotnet publish &quot;$(MSBuildProjectDirectory)/../Soenneker.Gen.Razor.ImageOptimizer.Avif.BuildTasks/Soenneker.Gen.Razor.ImageOptimizer.Avif.BuildTasks.csproj&quot; --configuration Release --framework net11.0 --runtime $(ImageOptimizerAvifNativeRuntimeIdentifier) --output &quot;$(ImageOptimizerAvifNativeArtifactsDir)/$(ImageOptimizerAvifNativeRuntimeIdentifier)&quot;" />
+        <Exec Command="dotnet publish &quot;$(MSBuildProjectDirectory)/../Soenneker.Gen.Razor.ImageOptimizer.Avif.BuildTasks/Soenneker.Gen.Razor.ImageOptimizer.Avif.BuildTasks.csproj&quot; --configuration Release --framework net10.0 --runtime $(ImageOptimizerAvifNativeRuntimeIdentifier) --output &quot;$(ImageOptimizerAvifNativeArtifactsDir)/$(ImageOptimizerAvifNativeRuntimeIdentifier)&quot;" />
     </Target>
 
     <ItemGroup>

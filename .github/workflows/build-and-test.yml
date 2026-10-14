@@ -34,7 +34,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: 11.0.100-rc.2.26504.105
+          dotnet-version: 10.0.402
 
       - uses: actions/download-artifact@v8
         with:
