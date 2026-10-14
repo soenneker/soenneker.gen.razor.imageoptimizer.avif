@@ -72,7 +72,7 @@
             Condition="'$(ImageOptimizerAvifUsePrebuiltNativeTools)' != 'true'"
             Inputs="@(ImageOptimizerAvifNativeSource);../Soenneker.Gen.Razor.ImageOptimizer.Avif.BuildTasks/obj/project.assets.json"
             Outputs="$(ImageOptimizerAvifNativeArtifactsDir)/$(ImageOptimizerAvifNativeRuntimeIdentifier)/$(_ImageOptimizerAvifNativeExecutable)">
-        <Exec Command="dotnet publish &quot;$(MSBuildProjectDirectory)/../Soenneker.Gen.Razor.ImageOptimizer.Avif.BuildTasks/Soenneker.Gen.Razor.ImageOptimizer.Avif.BuildTasks.csproj&quot; --configuration Release --runtime $(ImageOptimizerAvifNativeRuntimeIdentifier) --output &quot;$(ImageOptimizerAvifNativeArtifactsDir)/$(ImageOptimizerAvifNativeRuntimeIdentifier)&quot;" />
+        <Exec Command="dotnet publish &quot;$(MSBuildProjectDirectory)/../Soenneker.Gen.Razor.ImageOptimizer.Avif.BuildTasks/Soenneker.Gen.Razor.ImageOptimizer.Avif.BuildTasks.csproj&quot; --configuration Release --framework net11.0 --runtime $(ImageOptimizerAvifNativeRuntimeIdentifier) --output &quot;$(ImageOptimizerAvifNativeArtifactsDir)/$(ImageOptimizerAvifNativeRuntimeIdentifier)&quot;" />
     </Target>
 
     <ItemGroup>

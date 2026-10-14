@@ -24,15 +24,15 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: 10.0.402
+          dotnet-version: 11.0.100-rc.2.26504.105
       - name: Publish Native AOT executable
-        run: dotnet publish src/Soenneker.Gen.Razor.ImageOptimizer.Avif.BuildTasks -c Release -r ${{ matrix.rid }} -o artifacts/native/${{ matrix.rid }}
+        run: dotnet publish src/Soenneker.Gen.Razor.ImageOptimizer.Avif.BuildTasks -c Release -f net11.0 -r ${{ matrix.rid }} -o artifacts/native/${{ matrix.rid }}
       - name: Verify native generator output
         shell: pwsh
         run: |
           $extension = if ($IsWindows) { ".exe" } else { "" }
           $env:RAZOR_NATIVE_TOOL = Join-Path $PWD "artifacts/native/${{ matrix.rid }}/Soenneker.Gen.Razor.ImageOptimizer.Avif.BuildTasks$extension"
-          dotnet test --project test/Soenneker.Gen.Razor.ImageOptimizer.Avif.Tests -c Release -p:ImageOptimizerAvifUsePrebuiltNativeTools=true -- --treenode-filter "/*/*/NativeExecutableTests/*"
+          dotnet test --project "$PWD/test/Soenneker.Gen.Razor.ImageOptimizer.Avif.Tests/Soenneker.Gen.Razor.ImageOptimizer.Avif.Tests.csproj" -c Release -p:ImageOptimizerAvifUsePrebuiltNativeTools=true -- --treenode-filter "/*/*/NativeExecutableTests/*"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - uses: actions/upload-artifact@v7
         with:
