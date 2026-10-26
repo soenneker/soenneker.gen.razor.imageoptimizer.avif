@@ -16,7 +16,7 @@
 
     <PropertyGroup>
         <Description>Build-time progressive AVIF image optimization for Razor applications using libavif.</Description>
-        <Version Condition="'$(BUILD_VERSION)' == ''">4.0.0</Version>
+        <Version Condition="'$(BUILD_VERSION)' == ''">11.0.0</Version>
         <Version Condition="'$(BUILD_VERSION)' != ''">$(BUILD_VERSION)</Version>
         <AssemblyName>Soenneker.Gen.Razor.ImageOptimizer.Avif</AssemblyName>
         <PackageId>Soenneker.Gen.Razor.ImageOptimizer.Avif</PackageId>
@@ -70,7 +70,7 @@
     </PropertyGroup>
 
     <Target Name="BuildBuildTasksTool" BeforeTargets="Build" Condition="'$(ImageOptimizerAvifUsePrebuiltNativeTools)' != 'true'" Inputs="@(ImageOptimizerAvifNativeSource);../Soenneker.Gen.Razor.ImageOptimizer.Avif.BuildTasks/obj/project.assets.json" Outputs="$(ImageOptimizerAvifNativeArtifactsDir)/$(ImageOptimizerAvifNativeRuntimeIdentifier)/$(_ImageOptimizerAvifNativeExecutable)">
-        <Exec Command="dotnet publish &quot;$(MSBuildProjectDirectory)/../Soenneker.Gen.Razor.ImageOptimizer.Avif.BuildTasks/Soenneker.Gen.Razor.ImageOptimizer.Avif.BuildTasks.csproj&quot; --configuration Release --framework net10.0 --runtime $(ImageOptimizerAvifNativeRuntimeIdentifier) --output &quot;$(ImageOptimizerAvifNativeArtifactsDir)/$(ImageOptimizerAvifNativeRuntimeIdentifier)&quot;" />
+        <Exec Command="dotnet publish &quot;$(MSBuildProjectDirectory)/../Soenneker.Gen.Razor.ImageOptimizer.Avif.BuildTasks/Soenneker.Gen.Razor.ImageOptimizer.Avif.BuildTasks.csproj&quot; --configuration Release --framework net11.0 --runtime $(ImageOptimizerAvifNativeRuntimeIdentifier) --output &quot;$(ImageOptimizerAvifNativeArtifactsDir)/$(ImageOptimizerAvifNativeRuntimeIdentifier)&quot;" />
     </Target>
 
     <ItemGroup>
