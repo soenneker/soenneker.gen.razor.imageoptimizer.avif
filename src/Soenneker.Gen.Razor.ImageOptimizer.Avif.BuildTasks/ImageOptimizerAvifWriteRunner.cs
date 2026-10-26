@@ -228,7 +228,7 @@ public sealed class ImageOptimizerAvifWriteRunner : IImageOptimizerAvifWriteRunn
             if (encoded.Width != width || encoded.Height <= 0)
                 throw new InvalidDataException($"Expected width {width}, got {encoded.Width}x{encoded.Height}.");
             // Require a native atomic rename; FileUtil.Move can fall back to copy-and-delete.
-            File.Move(temporaryOutput, output, overwrite: true);
+            await _fileUtil.Move(temporaryOutput, output, log: false, cancellationToken);
             return new AvifImageVariant(RelativePath(outputRoot, output), encoded.Width, encoded.Height);
         }
         finally
@@ -297,7 +297,7 @@ public sealed class ImageOptimizerAvifWriteRunner : IImageOptimizerAvifWriteRunn
         {
             await _fileUtil.Write(temporary, json, cancellationToken: cancellationToken);
             // Keep cache publication atomic; do not use a copy-and-delete move fallback.
-            File.Move(temporary, path, overwrite: true);
+            await _fileUtil.Move(temporary, path, log: false, cancellationToken);
         }
         finally
         {
