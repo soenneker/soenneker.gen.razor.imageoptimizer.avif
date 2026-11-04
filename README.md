@@ -33,7 +33,7 @@ No application code or service registration is required.
 </PropertyGroup>
 ```
 
-`ImageOptimizerAvifOutputPath` may be absolute or relative to the project. When omitted, generated files are written beside their sources while preserving the directory tree. Outputs at least as new as their source are skipped unless `ImageOptimizerAvifForce` is `true`.
+`ImageOptimizerAvifOutputPath` may be absolute or relative to the project. When omitted, generated files are written beside their sources while preserving the directory tree. Existing outputs are skipped unless `ImageOptimizerAvifForce` is `true`, even when the local cache is missing or the source image, encoder settings, or package version changes. Missing full-size files and responsive variants are still generated. Set `ImageOptimizerAvifForce` to `true` (or delete the affected outputs) to apply source or encoding changes to existing files.
 
 Set `ImageOptimizerAvifEnabled` to `false` for builds that must not generate assets. With `ImageOptimizerAvifFailOnError=true`, any image failure fails the build; with `false`, failures are reported and the remaining images continue. Cancellation always stops the build task.
 

@@ -171,6 +171,15 @@ public sealed class ImageOptimizerAvifWriteRunner : IImageOptimizerAvifWriteRunn
                 foreach (int width in widths.Where(width => width < sourceWidth).Append(sourceWidth))
                 {
                     string path = width == sourceWidth ? output : VariantPath(output, width);
+                    // Checked-in outputs remain authoritative even without a local cache.
+                    if (!force && await _fileUtil.Exists(path, cancellationToken))
+                    {
+                        ImageInfo existing = await _libvipsUtil.Identify(path, cancellationToken);
+                        variants.Add(new AvifImageVariant(RelativePath(destinationRoot, path), existing.Width, existing.Height));
+                        skipped++;
+                        continue;
+                    }
+
                     AvifImageVariant variant = await EncodeVariant(source, path, destinationRoot, width, sourceHeight,
                         width == sourceWidth, options, cancellationToken);
                     variants.Add(variant);

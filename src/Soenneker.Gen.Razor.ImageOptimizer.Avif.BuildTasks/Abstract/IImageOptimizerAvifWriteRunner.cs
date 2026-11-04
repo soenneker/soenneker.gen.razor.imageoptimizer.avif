@@ -11,8 +11,8 @@ public interface IImageOptimizerAvifWriteRunner
     /// <summary>
     /// Discovers source images and writes full-size and responsive AVIF files without upscaling.
     /// The --widths argument accepts positive pixel widths separated by semicolons or commas
-    /// (480;960;1440 by default); "none" disables resized variants. Unchanged sources and settings
-    /// are skipped using the cache under obj/imageoptimizer-avif.
+    /// (480;960;1440 by default); "none" disables resized variants. Existing outputs are preserved
+    /// regardless of cache, source, or settings changes unless --force is true. Missing outputs are generated.
     /// Emits build warning AVIF001 when a requested width exceeds the source width, including on cached builds.
     /// </summary>
     /// <param name="args">Optimizer command-line arguments supplied by the MSBuild target.</param>

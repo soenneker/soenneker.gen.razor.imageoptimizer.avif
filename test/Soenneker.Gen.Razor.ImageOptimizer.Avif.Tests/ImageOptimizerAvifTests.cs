@@ -15,7 +15,7 @@ namespace Soenneker.Gen.Razor.ImageOptimizer.Avif.Tests;
 public sealed class ImageOptimizerAvifTests
 {
     [Test]
-    public async ValueTask Generates_real_variants_and_reuses_only_matching_inputs(CancellationToken cancellationToken)
+    public async ValueTask Preserves_existing_variants_without_cache_and_regenerates_only_when_forced(CancellationToken cancellationToken)
     {
         var services = new ServiceCollection();
         services.AddLogging();
@@ -46,20 +46,28 @@ public sealed class ImageOptimizerAvifTests
             (await runner.Run(args, cancellationToken)).Should().Be(0);
             (await provider.GetRequiredService<IFileUtil>().GetLastModified(output, cancellationToken: cancellationToken))!.Value.UtcDateTime.Should().Be(original);
 
-            // Encoder changes must invalidate the cache even with identical source timestamps.
+            // A fresh checkout has outputs but no cache; changing settings must still preserve them.
+            File.Delete(Path.Combine(root, "obj", "imageoptimizer-avif", "cache.json"));
             args[^1] = "65";
             (await runner.Run(args, cancellationToken)).Should().Be(0);
-            (await provider.GetRequiredService<IFileUtil>().GetLastModified(output, cancellationToken: cancellationToken))!.Value.UtcDateTime.Should().BeAfter(original);
+            (await provider.GetRequiredService<IFileUtil>().GetLastModified(output, cancellationToken: cancellationToken))!.Value.UtcDateTime.Should().Be(original);
+            string fullOutput = Path.Combine(images, "sample.avif");
+            DateTime fullTime = File.GetLastWriteTimeUtc(fullOutput);
             await provider.GetRequiredService<IFileUtil>().Delete(output, cancellationToken: cancellationToken);
             (await runner.Run(args, cancellationToken)).Should().Be(0);
             (await provider.GetRequiredService<IFileUtil>().Exists(output, cancellationToken: cancellationToken)).Should().BeTrue();
 
-            // Content hashes catch replacements even if a checkout preserves modification times.
+            File.GetLastWriteTimeUtc(fullOutput).Should().Be(fullTime);
+
+            // Source changes also preserve existing outputs until explicitly forced.
             DateTime sourceTime = (await provider.GetRequiredService<IFileUtil>().GetLastModified(source, cancellationToken: cancellationToken))!.Value.UtcDateTime;
             await vips.Run($"black \"{source}\" 800 400 --bands 4", log: false, cancellationToken: cancellationToken);
             await provider.GetRequiredService<IFileUtil>().SetLastWriteTimeUtc(source, sourceTime, cancellationToken: cancellationToken);
             (await runner.Run(args, cancellationToken)).Should().Be(0);
-            var smaller = await vips.Identify(Path.Combine(images, "sample.avif"), cancellationToken: cancellationToken);
+            File.GetLastWriteTimeUtc(fullOutput).Should().Be(fullTime);
+            (await vips.Identify(fullOutput, cancellationToken: cancellationToken)).Width.Should().Be(1000);
+            (await runner.Run([..args, "--force", "true"], cancellationToken)).Should().Be(0);
+            var smaller = await vips.Identify(fullOutput, cancellationToken: cancellationToken);
             smaller.Width.Should().Be(800);
             smaller.Height.Should().Be(400);
 
