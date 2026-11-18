@@ -17,7 +17,7 @@
     <ItemGroup>
         <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="11.0.0" />
         <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="11.0.0" />
-        <PackageReference Include="Soenneker.Libavif.Util" Version="11.0.142" />
+        <PackageReference Include="Soenneker.Libavif.Util" Version="11.0.143" />
         <PackageReference Include="Soenneker.Libvips.Util" Version="11.0.224" />
     </ItemGroup>
 </Project>
